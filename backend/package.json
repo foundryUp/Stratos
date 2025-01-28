@@ -1,0 +1,25 @@
+{
+    "name": "sepolia-trading-bot",
+    "version": "1.0.0",
+    "description": "A trading bot for the Sepolia testnet using Alchemy and 0x APIs.",
+    "type": "module",
+    "dependencies": {
+        "@ai-sdk/openai": "^1.1.1",
+        "@ankr.com/ankr.js": "0.5.2",
+        "@openrouter/ai-sdk-provider": "0.0.6",
+        "ai": "4.0.11",
+        "axios": "^1.7.9",
+        "cors": "^2.8.5",
+        "dotenv": "^16.1.4",
+        "express": "^4.21.2",
+        "groq-sdk": "^0.12.0",
+        "moralis": "^2.27.2",
+        "openai": "^4.80.0",
+        "tsconfig-paths": "^4.2.0",
+        "viem": "2.21.53"
+    },
+    "devDependencies": {
+        "@types/node": "^22.10.7",
+        "typescript": "^5.2.2"
+    }
+}
