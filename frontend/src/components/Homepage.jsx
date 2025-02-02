@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, Brain, Zap, MessageSquare, TrendingUp, ArrowRight } from 'lucide-react';
+import Footer from './Footer.jsx'; // Ensure correct path and default import
 
 function Homepage() {
   const navigate = useNavigate();
@@ -93,6 +94,9 @@ function Homepage() {
             </div>
           </div>
         </div>
+      </div>
+      <div>
+       <Footer />
       </div>
     </div>
   );
