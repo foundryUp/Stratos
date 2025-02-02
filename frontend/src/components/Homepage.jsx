@@ -1,7 +1,14 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Sparkles, Brain, Zap, MessageSquare, TrendingUp, ArrowRight } from 'lucide-react';
-import Footer from './Footer.jsx'; // Ensure correct path and default import
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Sparkles,
+  Brain,
+  Zap,
+  MessageSquare,
+  TrendingUp,
+  ArrowRight,
+} from "lucide-react";
+import Footer from "./Footer.jsx"; // Ensure correct path and default import
 
 function Homepage() {
   const navigate = useNavigate();
@@ -40,42 +47,74 @@ function Homepage() {
             IntentAI
           </h1>
           <p className="text-xl md:text-2xl mb-12 max-w-2xl text-gray-300">
-            Unleash the power of intelligent conversations with our next-generation AI assistant
+            Unleash the power of intelligent conversations with our
+            next-generation AI assistant
           </p>
 
           {/* Feature cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12">
+            {/* General Assistant Card */}
             <div
-              onClick={() => navigate('/general')}
-              className="group p-6 bg-gray-800 bg-opacity-50 backdrop-blur-lg rounded-2xl border border-gray-700 hover:border-blue-500 cursor-pointer transform hover:scale-105 transition-all duration-300"
+              onClick={() => navigate("/general")}
+              className="group p-8 bg-gray-800 bg-opacity-60 backdrop-blur-lg rounded-2xl border border-gray-700 hover:border-blue-500 cursor-pointer transform hover:scale-105 transition-all duration-300"
             >
               <div className="flex items-center mb-4">
-                <MessageSquare className="text-blue-500 mr-3" size={24} />
-                <h3 className="text-xl font-semibold">General Assistant</h3>
+                <MessageSquare className="text-blue-500 mr-3" size={28} />
+                <h3 className="text-xl font-semibold text-white">
+                  General Assistant
+                </h3>
               </div>
-              <p className="text-gray-400 mb-4">
-                Your all-purpose AI companion for any task or conversation
+              <p className="text-gray-300 mb-4">
+                Your all-purpose AI companion for any task or conversation.
               </p>
-              <div className="flex items-center text-blue-500 group-hover:translate-x-2 transition-transform">
-                Try Now <ArrowRight className="ml-2" size={20} />
+              <div className="flex items-center justify-center text-blue-500 group-hover:translate-x-2 transition-transform">
+                <span>Try Now</span>
+                <ArrowRight className="ml-2" size={22} />
               </div>
             </div>
 
+            {/* Trade using AI Card */}
             <div
-              onClick={() => navigate('/trading')}
-              className="group p-6 bg-gray-800 bg-opacity-50 backdrop-blur-lg rounded-2xl border border-gray-700 hover:border-green-500 cursor-pointer transform hover:scale-105 transition-all duration-300"
+              onClick={() => navigate("/trading")}
+              className="group p-8 bg-gray-800 bg-opacity-60 backdrop-blur-lg rounded-2xl border border-gray-700 hover:border-green-500 cursor-pointer transform hover:scale-105 transition-all duration-300"
             >
               <div className="flex items-center mb-4">
-                <TrendingUp className="text-green-500 mr-3" size={24} />
-                <h3 className="text-xl font-semibold">Trading Assistant</h3>
+                <TrendingUp className="text-green-500 mr-3" size={28} />
+                <h3 className="text-xl font-semibold text-white">
+                  Quant Trading
+                </h3>
               </div>
-              <p className="text-gray-400 mb-4">
-                Expert analysis and insights for your trading decisions
+              <p className="text-gray-300 mb-4">
+                Get trading insights powered by Quantitative trading models.
               </p>
-              <div className="flex items-center text-green-500 group-hover:translate-x-2 transition-transform">
-                Start Trading <ArrowRight className="ml-2" size={20} />
+              <div className="flex items-center justify-center text-green-500 group-hover:translate-x-2 transition-transform">
+                <span>Explore Strategies</span>
+                <ArrowRight className="ml-2" size={22} />
               </div>
             </div>
+
+            {/* Quant Trading Card (Updated Hover Color) */}
+            <div
+              onClick={() => navigate("/trading")}
+              className="group p-8 bg-gray-800 bg-opacity-60 backdrop-blur-lg rounded-2xl border border-gray-700 hover:border-red-500 cursor-pointer transform hover:scale-105 transition-all duration-300"
+            >
+              <div className="flex items-center mb-4">
+                <TrendingUp className="text-red-500 mr-3" size={28} />
+                <h3 className="text-xl font-semibold text-white">
+                  Trade using AI
+                </h3>
+              </div>
+              <p className="text-gray-300 mb-4">
+              Get insights on advanced trading strategies to level up your
+              game. 
+              </p>
+              <div className="flex items-center justify-center text-red-500 group-hover:translate-x-2 transition-transform">
+                <span>Start Trading</span>
+                <ArrowRight className="ml-2" size={22} />
+              </div>
+            </div>
+
+
           </div>
 
           {/* Floating features */}
@@ -95,8 +134,9 @@ function Homepage() {
           </div>
         </div>
       </div>
+      
       <div>
-       <Footer />
+      <Footer />
       </div>
     </div>
   );
