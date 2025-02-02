@@ -5,6 +5,7 @@ import {UniswapRegistry} from "./UniswapRegistry.sol";
 import {IUniswap} from "./IUniswap.sol";
 import {IERC20} from "./IERC20.sol";
 
+
 contract IntentEngine is UniswapRegistry {
     error InvalidSyntax();
     error InvalidCharacter();
@@ -16,13 +17,7 @@ contract IntentEngine is UniswapRegistry {
 
     function commandToTrade(
         string calldata intent
-    )
-        external
-        returns (
-            uint256 amount,
-            string memory protocol
-        )
-    {
+    ) external returns (uint256 amount, string memory protocol) {
         address client = msg.sender;
         bytes memory normalized = _lowercase(bytes(intent));
         StringPart[] memory parts = _split(normalized, " ");
@@ -186,4 +181,8 @@ contract IntentEngine is UniswapRegistry {
 
         return (addToken1, addToken2, amount, protocol);
     }
+
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal onlyOwner virtual override {}
 }
