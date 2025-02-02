@@ -1,25 +1,33 @@
-
-import React, { useState, useRef, useEffect } from 'react';
-import { Send, Image as ImageIcon, X, Camera, Loader, Sparkles, Command, MessageSquare, Zap, Hash, Globe, Bot, LineChart } from 'lucide-react';
-import Spline from '@splinetool/react-spline';
-import { TradeABI, TradeContractAddress, ERC20ABI ,WETH_ABI} from '../constants/abi';
-import { ethers, getAddress } from 'ethers';
-import { useNavigate } from 'react-router-dom';
-
+import React, { useState, useRef, useEffect } from "react";
+import {
+  Send,
+  Image as ImageIcon,
+  Loader,
+} from "lucide-react";
+import Spline from "@splinetool/react-spline";
+import {
+  TradeABI,
+  TradeContractAddress,
+  ERC20ABI,
+  WETH_ABI,
+} from "../constants/abi";
+import { ethers, getAddress } from "ethers";
+import { useNavigate } from "react-router-dom";
 
 const IntentAI = () => {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
   const chatContainerRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('general');
-  const [firstPrompt,setFirstPrompt] = useState('')
+  const [activeTab, setActiveTab] = useState("general");
+  const [firstPrompt, setFirstPrompt] = useState("");
   const [messages, setMessages] = useState([
     {
-      type: 'bot',
-      content: "📈 Welcome to the Trading Assistant! I can help you with market analysis, trading strategies, and more."
-    }
+      type: "bot",
+      content:
+        "📈 Welcome to the Trading Assistant! I can help you with market analysis, trading strategies, and more.",
+    },
   ]);
-const [test,setTest]=useState("");
+  const [test, setTest] = useState("");
   const [account, setAccount] = useState("");
   const [message, setMessage] = useState("");
   // const [amount, setAmount] = useState("");
@@ -30,19 +38,21 @@ const [test,setTest]=useState("");
   const [input, setInput] = useState("");
 
   const [outputPrompt, setOutputPrompt] = useState("");
-  const [contractAddress, setContractAddress] = useState('');
-  const [contractABI, setContractABI] = useState('');
+  const [contractAddress, setContractAddress] = useState("");
+  const [contractABI, setContractABI] = useState("");
   const [transactionSucceeded, settransactionSucceeded] = useState(false);
-  const [aiResponse, setaiResponse] = useState('')
-  const [amountTotrade, setAmountToTrade] = useState(null)
-  const [addressfirstTokenToTrade, setaddressfirstTokenToTrade] = useState(null)
-  const [startTX, setstartTX] = useState(null)
-  const [isApproved, setIsApproved] = useState(false)
-  const [balances, setBalances] = useState({})
+  const [aiResponse, setaiResponse] = useState("");
+  const [amountTotrade, setAmountToTrade] = useState(null);
+  const [addressfirstTokenToTrade, setaddressfirstTokenToTrade] =
+    useState(null);
+  const [startTX, setstartTX] = useState(null);
+  const [isApproved, setIsApproved] = useState(false);
+  const [balances, setBalances] = useState({});
 
   useEffect(() => {
     if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
     }
   }, [messages]);
 
@@ -50,14 +60,14 @@ const [test,setTest]=useState("");
     if (window.ethereum) {
       try {
         const provider = new ethers.BrowserProvider(window.ethereum);
-        setProvider(provider); 
+        setProvider(provider);
         const accounts = await provider.send("eth_requestAccounts", []);
         setAccount(accounts[0]);
 
         const signer = await provider.getSigner();
-        setSigner(signer); 
+        setSigner(signer);
 
-        console.log("account connected => ", accounts[0])
+        console.log("account connected => ", accounts[0]);
       } catch (error) {
         console.error("Error connecting wallet:", error);
       }
@@ -66,211 +76,243 @@ const [test,setTest]=useState("");
     }
   };
 
-  const returnIntentValues = async function(){
-
-    const contract = new ethers.Contract(TradeContractAddress, TradeABI, signer);
+  const returnIntentValues = async function () {
+    const contract = new ethers.Contract(
+      TradeContractAddress,
+      TradeABI,
+      signer
+    );
 
     try {
       if (!account) {
-        alert("! Connect to Metamask or some kind of EVM Compatible Wallet ! ...")
+        alert(
+          "! Connect to Metamask or some kind of EVM Compatible Wallet ! ..."
+        );
         setTimeout(() => {
           window.location.reload();
-        }, 2000);        
+        }, 2000);
         throw new Error("Metamask is not installed");
       }
-      console.log(typeof(aiResponse))
+      console.log(typeof aiResponse);
       const response = await contract.returnIntentValues(aiResponse);
 
-      console.log("token 1:",response[0])
-      console.log("token 2:",response[1])
-      console.log("amount:",response[2])
-      setAmountToTrade(response[2])
-      setaddressfirstTokenToTrade(response[0])
-      console.log("protocol",response[3])
+      console.log("token 1:", response[0]);
+      console.log("token 2:", response[1]);
+      console.log("amount:", response[2]);
+      setAmountToTrade(response[2]);
+      setaddressfirstTokenToTrade(response[0]);
+      console.log("protocol", response[3]);
     } catch (error) {
       console.error("Error calling returnIntentValues:", error);
     }
+  };
 
-  } 
-
-  const balanceOfDai = async()=>{
+  const balanceOfDai = async () => {
     if (!account) {
-      alert("! Connect to Metamask or some kind of EVM Compatible Wallet ! ...")
+      alert(
+        "! Connect to Metamask or some kind of EVM Compatible Wallet ! ..."
+      );
       throw new Error("Metamask is not installed");
     }
     //weth 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
     //dai 0x6B175474E89094C44Da98b954EedeAC495271d0F
-    const daiContract = new ethers.Contract("0x6B175474E89094C44Da98b954EedeAC495271d0F", WETH_ABI, signer);
+    const daiContract = new ethers.Contract(
+      "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+      WETH_ABI,
+      signer
+    );
     const balance = await daiContract.balanceOf(account);
-    console.log("dai balance : ",balance)
-
-  }
+    console.log("dai balance : ", balance);
+  };
 
   const giveWeth = async () => {
     try {
       if (!window.ethereum) {
-        alert("! Connect to Metamask or some kind of EVM Compatible Wallet ! ...")
+        alert(
+          "! Connect to Metamask or some kind of EVM Compatible Wallet ! ..."
+        );
         throw new Error("Metamask is not installed");
       }
-  
-      const wethContract = new ethers.Contract("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", WETH_ABI, signer);
-      console.log(wethContract)
-      console.log(signer)
-      
-  
-      const depositTx = await wethContract.deposit({ value: ethers.parseEther("10") });
+
+      const wethContract = new ethers.Contract(
+        "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        WETH_ABI,
+        signer
+      );
+      console.log(wethContract);
+      console.log(signer);
+
+      const depositTx = await wethContract.deposit({
+        value: ethers.parseEther("10"),
+      });
       console.log("Depositing ETH to WETH...");
       // await depositTx.wait();
-  
+
       // console.log("Transferring WETH to recipient...");
       // const receipt = await transferTx.wait();
-  
-      // console.log("WETH successfully sent!", receipt);
-      if(depositTx){
-        const balance = await wethContract.balanceOf(account);
-        console.log("weth balance : ",balance)
-      }
 
+      // console.log("WETH successfully sent!", receipt);
+      if (depositTx) {
+        const balance = await wethContract.balanceOf(account);
+        console.log("weth balance : ", balance);
+      }
     } catch (error) {
       console.error("Error giving WETH to user:", error);
       throw error;
     }
-  }
-  
+  };
+
   const handleTokensApprove = async () => {
     if (!window.ethereum) {
-      alert("! Connect to Metamask or some kind of EVM Compatible Wallet ! ...")
+      alert(
+        "! Connect to Metamask or some kind of EVM Compatible Wallet ! ..."
+      );
       throw new Error("Metamask is not installed");
     }
-    
-    const tokenToTrade = new ethers.Contract("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", ERC20ABI, signer);
+
+    const tokenToTrade = new ethers.Contract(
+      "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+      ERC20ABI,
+      signer
+    );
 
     if (account) {
       const balance = await tokenToTrade.balanceOf(account);
-      if(balance < amountTotrade) {
+      if (balance < amountTotrade) {
         alert("Insufficient balance");
         return;
       }
-      const approveTransaction  = await tokenToTrade.approve(TradeContractAddress, amountTotrade)
+      const approveTransaction = await tokenToTrade.approve(
+        TradeContractAddress,
+        amountTotrade
+      );
       await approveTransaction.wait(1);
-      setIsApproved(true)
-    }else{
-      alert("connect metamask again!....")
+      setIsApproved(true);
+    } else {
+      alert("connect metamask again!....");
     }
 
     // await tx.wait();
 
     // console.log("Trade Done");
-
-  }
+  };
 
   const fetchAllBalances = async () => {
     if (!window.ethereum) {
       alert("Connect to MetaMask or another EVM wallet!");
       throw new Error("MetaMask is not installed");
     }
-  
-   
   };
 
-  
-  useEffect(()=>{
-    if(amountTotrade){
-      handleTokensApprove()
+  useEffect(() => {
+    if (amountTotrade) {
+      handleTokensApprove();
     }
-  },[amountTotrade])
+  }, [amountTotrade]);
 
   const handleSend = async () => {
-
     let balances = {};
     try {
-  
       const tokenAddresses = {
         DAI: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
         WETH: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
         // USDC: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
         WBTC: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
       };
-  
+
       for (const [token, address] of Object.entries(tokenAddresses)) {
         const tokenContract = new ethers.Contract(address, ERC20ABI, provider);
         const balance = await tokenContract.balanceOf(account);
         balances[token] = ethers.formatUnits(balance, 18);
       }
-  
+
       console.log("User Token Balances:", balances);
     } catch (error) {
       console.error("Error fetching balances:", error);
       throw error;
     }
-   
+
     if (!input.trim()) return;
-  
+
     // Add user input to messages
-    setMessages((prev) => [...prev, { type: 'user', content: input }]);
-  
+    setMessages((prev) => [...prev, { type: "user", content: input }]);
+
     // Set the first prompt and clear the input field
     setFirstPrompt(input);
     console.log("input : ", input);
-    if(input.toLowerCase()=="confirm"){
-      if(amountTotrade>0 && isApproved==true) 
-      commandToTradeStart();
-      setMessages(prev => [...prev, { type: 'bot', content: "Please wait for transaction to be done...." }]);
+    if (input.toLowerCase() == "confirm") {
+      if (amountTotrade > 0 && isApproved == true) commandToTradeStart();
+      setMessages((prev) => [
+        ...prev,
+        { type: "bot", content: "Please wait for transaction to be done...." },
+      ]);
       return;
     }
-    setInput('');
-  
-    try {
+    setInput("");
 
-      
-      const response = await fetch("http://localhost:5000/api/generate-insights", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ prompt : input , balances : balances }), 
-      });
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/generate-insights",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ prompt: input, balances: balances }),
+        }
+      );
 
       if (!response.ok) {
-        setMessages(prev => [...prev, { 
-          type: 'bot', 
-          content: "Servers are busy. Please try again in 30 seconds."
-        }]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: "bot",
+            content: "Servers are busy. Please try again in 30 seconds.",
+          },
+        ]);
         return;
       }
       const data = await response.json();
       console.log("Response from backend:", data);
-      setaiResponse(data.response)
-      const [fromToken, toToken, amount, platform] = data.response.split(' ');
-      const responseForUser =  `You should swap ${fromToken} to ${toToken} with an amount of ${amount} on the ${platform} platform. I can do it for you type "CONFIRM"`;
-      setMessages(prev => [...prev, { type: 'bot', content: responseForUser }]);
-      
+      setaiResponse(data.response);
+      const [fromToken, toToken, amount, platform] = data.response.split(" ");
+      const responseForUser = `You should swap ${fromToken} to ${toToken} with an amount of ${amount} on the ${platform} platform. I can do it for you type "CONFIRM"`;
+      setMessages((prev) => [
+        ...prev,
+        { type: "bot", content: responseForUser },
+      ]);
     } catch (error) {
       console.error("Error fetching insights:", error);
       return null;
     }
   };
 
-  useEffect(()=>{
-    if(aiResponse){
+  useEffect(() => {
+    if (aiResponse) {
       console.log("Starting transaction ....");
       returnIntentValues();
     }
-  },[aiResponse])
+  }, [aiResponse]);
 
-  const commandToTradeStart = async()=>{
+  const commandToTradeStart = async () => {
     if (!account) {
-      alert("! Connect to Metamask or some kind of EVM Compatible Wallet ! ...")
+      alert(
+        "! Connect to Metamask or some kind of EVM Compatible Wallet ! ..."
+      );
       throw new Error("Metamask is not installed");
     }
-    
-    const tradeIntentEngine = new ethers.Contract(TradeContractAddress, TradeABI, signer);
+
+    const tradeIntentEngine = new ethers.Contract(
+      TradeContractAddress,
+      TradeABI,
+      signer
+    );
     const tradeTx = await tradeIntentEngine.commandToTrade(aiResponse);
     // await tradeTx.wait()
-    console.log("Trade Transaction Hash => ",tradeTx)
-  }
+    console.log("Trade Transaction Hash => ", tradeTx);
+  };
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
@@ -293,7 +335,9 @@ const [test,setTest]=useState("");
             <div className="px-4 py-2 rounded-full border border-white/10 bg-black/30 backdrop-blur-xl">
               <div className="flex items-center space-x-2">
                 <span className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></span>
-                <p className="text-sm text-white/70">AI-Powered • Real-Time • Intelligent</p>
+                <p className="text-sm text-white/70">
+                  AI-Powered • Real-Time • Intelligent
+                </p>
               </div>
             </div>
           </div>
@@ -301,23 +345,29 @@ const [test,setTest]=useState("");
           {/* Title Section */}
           <div className="space-y-4">
             <h1 className="text-7xl font-bold tracking-tight">
-              <span onClick={() => navigate('/')} className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-indigo-500 to-blue-500 animate-gradient-x">
+              <span
+                onClick={() => navigate("/")}
+                className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-indigo-500 to-blue-500 animate-gradient-x"
+              >
                 Intent
               </span>
-              <span onClick={() => navigate('/')}  className="text-transparent bg-clip-text bg-gradient-to-r from-purple-200 to-indigo-300">
+              <span
+                onClick={() => navigate("/")}
+                className="text-transparent bg-clip-text bg-gradient-to-r from-purple-200 to-indigo-300"
+              >
                 AI
               </span>
             </h1>
             <p className="text-lg text-white/80 leading-relaxed max-w-xl mx-auto font-light">
-              Experience seamless crypto solutions with Intent AI Chatbot – your ultimate cryptocurrency companion today!
+              Experience seamless crypto solutions with Intent AI Chatbot – your
+              ultimate cryptocurrency companion today!
             </p>
           </div>
 
           {/* Updated Spline Container */}
           <div className="relative w-full h-[500px]">
-{/* \            <Spline scene="https://prod.spline.design/6cBpFzCL5rJzFnLv/scene.splinecode" /> */}
-                <Spline scene="https://prod.spline.design/kp7PSDuIOPgVm6F1/scene.splinecode" />
-
+            {/* \            <Spline scene="https://prod.spline.design/6cBpFzCL5rJzFnLv/scene.splinecode" /> */}
+            <Spline scene="https://prod.spline.design/kp7PSDuIOPgVm6F1/scene.splinecode" />
           </div>
         </div>
       </div>
@@ -339,7 +389,9 @@ const [test,setTest]=useState("");
                       </div>
                     </div>
                     <div>
-                      <h2 className="font-bold text-white text-lg">AI Assistant</h2>
+                      <h2 className="font-bold text-white text-lg">
+                        AI Assistant
+                      </h2>
                       <div className="flex items-center space-x-2">
                         <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
                         <p className="text-white/60 text-sm">Online & Ready</p>
@@ -348,7 +400,24 @@ const [test,setTest]=useState("");
                   </div>
                 </div>
 
-
+                {!account && (
+                  <div className="flex w-full space-x-4">
+                    <button
+                      onClick={connectWallet}
+                      className="flex-grow p-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl text-white font-medium hover:opacity-90 transition-opacity"
+                    >
+                      Connect Wallet
+                    </button>
+                   
+                  </div>
+                )}
+                <br></br>
+                 <button
+                      onClick={giveWeth}
+                      className="lex w-full space-x-4 flex-grow p-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl text-white font-medium hover:opacity-90 transition-opacity"
+                    >
+                      Get WETH for testing
+                    </button>
               </div>
 
               {/* Chat messages */}
@@ -359,14 +428,16 @@ const [test,setTest]=useState("");
                 {messages.map((message, index) => (
                   <div
                     key={index}
-                    className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'
-                      } animate-fade-in-up`}
+                    className={`flex ${
+                      message.type === "user" ? "justify-end" : "justify-start"
+                    } animate-fade-in-up`}
                   >
                     <div
-                      className={`max-w-[85%] p-3 rounded-2xl backdrop-blur-sm ${message.type === 'user'
-                        ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-br-none'
-                        : 'bg-white/5 text-white rounded-bl-none border border-white/10'
-                        }`}
+                      className={`max-w-[85%] p-3 rounded-2xl backdrop-blur-sm ${
+                        message.type === "user"
+                          ? "bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-br-none"
+                          : "bg-white/5 text-white rounded-bl-none border border-white/10"
+                      }`}
                     >
                       <p className="leading-relaxed">{message.content}</p>
                     </div>
@@ -389,13 +460,17 @@ const [test,setTest]=useState("");
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyPress={handleKeyPress}
-                      placeholder={activeTab === 'general' ? "Ask me anything..." : "Ask about trading..."}
+                      placeholder={
+                        activeTab === "general"
+                          ? "Ask me anything..."
+                          : "Ask about trading..."
+                      }
                       rows="1"
                       className="flex-1 p-3 bg-black/50 backdrop-blur-xl text-white placeholder-white/40 border border-white/10 rounded-2xl focus:outline-none focus:border-white/20 resize-none transition-all duration-300"
                       style={{
-                        height: '48px',
-                        minHeight: '48px',
-                        maxHeight: '120px'
+                        height: "48px",
+                        minHeight: "48px",
+                        maxHeight: "120px",
                       }}
                     />
                     <button
@@ -410,14 +485,7 @@ const [test,setTest]=useState("");
                     </button>
                   </div>
                 </div>
-                <br></br>
-                <button onClick={connectWallet} >Connet Wallet!</button>
-                <br></br>
-                <br></br>
-                <button onClick={giveWeth}>Give weth for Testing </button>
-                </div>
-                {/* <button onClick={commandToTradeStart}>Start!!</button> */}
-                <button onClick={balanceOfDai}>Balance dai console</button>
+              </div>
             </div>
           </div>
         </div>

@@ -182,7 +182,4 @@ contract IntentEngine is UniswapRegistry {
         return (addToken1, addToken2, amount, protocol);
     }
 
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal onlyOwner virtual override {}
 }
