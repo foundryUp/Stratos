@@ -285,7 +285,8 @@ const [test,setTest]=useState("");
 
           {/* Updated Spline Container */}
           <div className="relative w-full h-[500px]">
-            <Spline scene="https://prod.spline.design/31iD8MVkM1IpbbeX/scene.splinecode" />
+            {/* <Spline scene="https://prod.spline.design/31iD8MVkM1IpbbeX/scene.splinecode" /> */}    
+            <Spline scene="https://prod.spline.design/6cBpFzCL5rJzFnLv/scene.splinecode" />
           </div>
         </div>
       </div>
