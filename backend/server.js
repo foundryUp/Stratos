@@ -15,6 +15,11 @@ const PORT = process.env.PORT || 5000;
 app.use(cors()); // Enable CORS for frontend communication
 app.use(express.json()); // Parse JSON request bodies
 
+
+app.get("/health",(req,res)=>{
+  res.send("Server is running successfully...")
+})
+
 // API endpoint to handle requests from the frontend
 app.post("/api/generate-insights", async (req, res) => {
   try {
@@ -59,10 +64,12 @@ app.post("/api/generate-insights", async (req, res) => {
   }
 });
 
+
 // Start the server
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on PORT => ${PORT}`);
 });
+
 
 
 
