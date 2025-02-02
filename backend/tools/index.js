@@ -1,22 +1,10 @@
 import dotenv from "dotenv";
 dotenv.config();
-import Moralis from "moralis";
-import { AnkrProvider } from "@ankr.com/ankr.js";
 import { z } from "zod";
 import { tool } from "ai";
-import { http } from "viem";
 
-if (!process.env.ANKR_API_KEY) {
-  throw new Error("ANKR_API_KEY environment variable must be set");
-}
 
-const provider = new AnkrProvider(
-  `https://rpc.ankr.com/multichain/${process.env.ANKR_API_KEY}`
-);
-
-// const ZEROX_API_URL = "https://arbitrum.api.0x.org";
-
-export const createNaniTools = ({ account, walletClient, publicClient }) => ({
+export const createFoundryUpTools = (tokenBalance) => ({
   getLiquidityPoolPrice: tool({
     description: "Get liquidity pool price using Moralis",
     parameters: z.object({
@@ -39,26 +27,12 @@ export const createNaniTools = ({ account, walletClient, publicClient }) => ({
       }
     },
   }),
-
   getBalance: tool({
     description: "Check token balances with current prices",
     parameters: z.object({}),
     execute: async () => {
-      try {
-        const [address] = await walletClient.getAddresses();
-        const response = await provider.getAccountBalance({
-          blockchain: "eth",
-          walletAddress: address,
-          onlyWhitelisted: false,
-        });
-        if (!response) {
-          throw new Error("Failed to fetch balance");
-        }
-        return response;
-      } catch (error) {
-        console.error("Error fetching balance:", error);
-        return { error: error.message || "An unknown error occurred" };
-      }
+      console.log("balances json in backend : ", tokenBalance)
+      return tokenBalance
     },
   }),
 });

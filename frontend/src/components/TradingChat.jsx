@@ -38,6 +38,7 @@ const [test,setTest]=useState("");
   const [addressfirstTokenToTrade, setaddressfirstTokenToTrade] = useState(null)
   const [startTX, setstartTX] = useState(null)
   const [isApproved, setIsApproved] = useState(false)
+  const [balances, setBalances] = useState({})
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -159,10 +160,20 @@ const [test,setTest]=useState("");
 
     // await tx.wait();
 
-    console.log("Trade Done");
+    // console.log("Trade Done");
 
   }
 
+  const fetchAllBalances = async () => {
+    if (!window.ethereum) {
+      alert("Connect to MetaMask or another EVM wallet!");
+      throw new Error("MetaMask is not installed");
+    }
+  
+   
+  };
+
+  
   useEffect(()=>{
     if(amountTotrade){
       handleTokensApprove()
@@ -170,6 +181,29 @@ const [test,setTest]=useState("");
   },[amountTotrade])
 
   const handleSend = async () => {
+
+    let balances = {};
+    try {
+  
+      const tokenAddresses = {
+        DAI: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+        WETH: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        // USDC: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        WBTC: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      };
+  
+      for (const [token, address] of Object.entries(tokenAddresses)) {
+        const tokenContract = new ethers.Contract(address, ERC20ABI, provider);
+        const balance = await tokenContract.balanceOf(account);
+        balances[token] = ethers.formatUnits(balance, 18);
+      }
+  
+      console.log("User Token Balances:", balances);
+    } catch (error) {
+      console.error("Error fetching balances:", error);
+      throw error;
+    }
+   
     if (!input.trim()) return;
   
     // Add user input to messages
@@ -181,16 +215,20 @@ const [test,setTest]=useState("");
     if(input.toLowerCase()=="confirm"){
       if(amountTotrade>0 && isApproved==true) 
       commandToTradeStart();
+      setMessages(prev => [...prev, { type: 'bot', content: "Please wait for transaction to be done...." }]);
+      return;
     }
     setInput('');
   
     try {
+
+      
       const response = await fetch("http://localhost:5000/api/generate-insights", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt : input }), 
+        body: JSON.stringify({ prompt : input , balances : balances }), 
       });
 
       if (!response.ok) {
@@ -200,7 +238,6 @@ const [test,setTest]=useState("");
         }]);
         return;
       }
-  
       const data = await response.json();
       console.log("Response from backend:", data);
       setaiResponse(data.response)
@@ -228,8 +265,7 @@ const [test,setTest]=useState("");
     }
     
     const tradeIntentEngine = new ethers.Contract(TradeContractAddress, TradeABI, signer);
-    //const tradeTx = await tradeIntentEngine.commandToTrade(aiResponse);
-    const tradeTx = await tradeIntentEngine.commandToTrade("WETH DAI 0.0009 UNISWAP");
+    const tradeTx = await tradeIntentEngine.commandToTrade(aiResponse);
     // await tradeTx.wait()
     console.log("Trade Transaction Hash => ",tradeTx)
   }
