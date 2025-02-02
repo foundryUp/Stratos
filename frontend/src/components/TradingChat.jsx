@@ -1,20 +1,9 @@
-// import dotenv from "dotenv"
-// dotenv.config()
 
-// import { SYSTEM_PROMPT } from "./config/prompt.js";
-// import { createPublicClient, createWalletClient, http } from "viem";
-// import { arbitrum, mainnet } from "viem/chains";
-// import { createNaniTools } from "./tools/index.js";
-// import { openai } from "@ai-sdk/openai";
-// import { generateText } from "ai";
-// import { OpenAI} from "openai"
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Image as ImageIcon, X, Camera, Loader, Sparkles, Command, MessageSquare, Zap, Hash, Globe, Bot, LineChart } from 'lucide-react';
 import Spline from '@splinetool/react-spline';
 import { TradeABI, TradeContractAddress, ERC20ABI ,WETH_ABI} from '../constants/abi';
-import { ethers } from 'ethers';
-// import {model} from '../../../backend/agent.js'
-// import { sign } from 'viem/accounts';
+import { ethers, getAddress } from 'ethers';
 
 const IntentAI = () => {
   const chatContainerRef = useRef(null);
@@ -37,13 +26,14 @@ const [test,setTest]=useState("");
   const [inputPrompt, setInputPrompt] = useState("");
   const [input, setInput] = useState("");
 
-  const [outputPrompt, setOutputPrompt] = useState(""); //4 words
+  const [outputPrompt, setOutputPrompt] = useState("");
   const [contractAddress, setContractAddress] = useState('');
   const [contractABI, setContractABI] = useState('');
   const [transactionSucceeded, settransactionSucceeded] = useState(false);
-  const [airesponse, setairesponse] = useState('')
+  const [aiResponse, setaiResponse] = useState('')
   const [amountTotrade, setAmountToTrade] = useState(null)
   const [addressfirstTokenToTrade, setaddressfirstTokenToTrade] = useState(null)
+  const [startTX, setstartTX] = useState(null)
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -55,12 +45,14 @@ const [test,setTest]=useState("");
     if (window.ethereum) {
       try {
         const provider = new ethers.BrowserProvider(window.ethereum);
-        setProvider(provider); // Store the provider
+        setProvider(provider); 
         const accounts = await provider.send("eth_requestAccounts", []);
         setAccount(accounts[0]);
 
         const signer = await provider.getSigner();
-        setSigner(signer); // Store the signer
+        setSigner(signer); 
+
+        console.log("account connected => ", accounts[0])
       } catch (error) {
         console.error("Error connecting wallet:", error);
       }
@@ -69,19 +61,26 @@ const [test,setTest]=useState("");
     }
   };
 
-  const returnIntentValuesOnStart = async function(){
+  const returnIntentValues = async function(){
 
     const contract = new ethers.Contract(TradeContractAddress, TradeABI, signer);
 
     try {
-      const response = await contract.returnIntentValues(airesponse);
+      if (!account) {
+        alert("! Connect to Metamask or some kind of EVM Compatible Wallet ! ...")
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);        
+        throw new Error("Metamask is not installed");
+      }
+      console.log(typeof(aiResponse))
+      const response = await contract.returnIntentValues(aiResponse);
 
       console.log("token 1:",response[0])
       console.log("token 2:",response[1])
       console.log("amount:",response[2])
       setAmountToTrade(response[2])
       setaddressfirstTokenToTrade(response[0])
-
       console.log("protocol",response[3])
     } catch (error) {
       console.error("Error calling returnIntentValues:", error);
@@ -89,26 +88,36 @@ const [test,setTest]=useState("");
 
   } 
 
+  const balanceOfDai = async()=>{
+
+    if (!account) {
+      alert("! Connect to Metamask or some kind of EVM Compatible Wallet ! ...")
+      throw new Error("Metamask is not installed");
+    }
+
+    const daiContract = new ethers.Contract("0x6B175474E89094C44Da98b954EedeAC495271d0F", WETH_ABI, signer);
+    const balance = await daiContract.balanceOf(account);
+    console.log("dai balance : ",balance)
+
+  }
+
   const giveWeth = async () => {
     try {
-      // Check if the user has a wallet connected
       if (!window.ethereum) {
+        alert("! Connect to Metamask or some kind of EVM Compatible Wallet ! ...")
         throw new Error("Metamask is not installed");
       }
   
-      // Request wallet access
       const wethContract = new ethers.Contract("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", WETH_ABI, signer);
       console.log(wethContract)
       console.log(signer)
-      // Convert the amount to wei (18 decimals)
       
   
-      // Step 1: Wrap ETH into WETH by calling `deposit`
       const depositTx = await wethContract.deposit({ value: ethers.parseEther("10") });
       console.log("Depositing ETH to WETH...");
       // await depositTx.wait();
   
-      console.log("Transferring WETH to recipient...");
+      // console.log("Transferring WETH to recipient...");
       // const receipt = await transferTx.wait();
   
       // console.log("WETH successfully sent!", receipt);
@@ -117,44 +126,44 @@ const [test,setTest]=useState("");
         console.log("weth balance : ",balance)
       }
 
-      // return receipt;
     } catch (error) {
       console.error("Error giving WETH to user:", error);
       throw error;
     }
   }
   
-  const handleCommandToTrade = async () => {
- 
-    // const contract = new ethers.Contract(TradeContractAddress, TradeABI, signer);
-
+  const handleTokensApprove = async () => {
+    if (!window.ethereum) {
+      alert("! Connect to Metamask or some kind of EVM Compatible Wallet ! ...")
+      throw new Error("Metamask is not installed");
+    }
     
-    // const tokenContract = new ethers.Contract(`${addressfirstTokenToTrade}`, ERC20ABI, signer);
-    // const userAddress = await signer.getAddress();
-    // if (userAddress) {
-    //   const balance = await tokenContract.balanceOf(signer.getAddress());
-    //   await tokenContract.approve(address(contract), amount)
+    const tokenToTrade = new ethers.Contract("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", ERC20ABI, signer);
 
-    //   if(balance < amount) {
-    //     alert("Insufficient balance");
-    //     return;
-    //   }
-    // }
-
-    // const tx = await contract.commandToTrade(airesponse, { value: amount });
-
-    // console.log("Transaction sent! Hash:", tx.hash);
+    if (account) {
+      const balance = await tokenToTrade.balanceOf(account);
+      if(balance < amountTotrade) {
+        alert("Insufficient balance");
+        return;
+      }
+      const approveTransaction  = await tokenToTrade.approve(TradeContractAddress, amountTotrade)
+      await approveTransaction.wait(1);
+      if(approveTransaction){
+        setstartTX(true)
+      }
+    }else{
+      alert("connect metamask again!....")
+    }
 
     // await tx.wait();
 
-    // console.log("transaction confirmed");
-
+    console.log("Trade Done");
 
   }
 
   useEffect(()=>{
     if(amountTotrade){
-      handleCommandToTrade()
+      handleTokensApprove()
     }
   },[amountTotrade])
 
@@ -175,29 +184,58 @@ const [test,setTest]=useState("");
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt : input }), // Send the prompt to the backend
+        body: JSON.stringify({ prompt : input }), 
       });
+
+      if (!response.ok) {
+        setMessages(prev => [...prev, { 
+          type: 'bot', 
+          content: "Servers are busy. Please try again in 30 seconds."
+        }]);
+        return;
+      }
   
       const data = await response.json();
       console.log("Response from backend:", data);
-      return data.response; // Return the generated insights
+      setaiResponse(data.response)
+      const [fromToken, toToken, amount, platform] = data.response.split(' ');
+      const responseForUser =  `You should swap ${fromToken} to ${toToken} with an amount of ${amount} on the ${platform} platform. I can do it for you type "CONFIRM"`;
+      setMessages(prev => [...prev, { type: 'bot', content: responseForUser }]);
+      
     } catch (error) {
       console.error("Error fetching insights:", error);
       return null;
     }
-
-
   };
 
   useEffect(()=>{
-    
-
-    if(airesponse){
+    if(aiResponse){
       console.log("Starting transaction ....");
-      returnIntentValuesOnStart();
+      returnIntentValues();
     }
+  },[aiResponse])
 
-  },[airesponse])
+  const commandToTradeStart = async()=>{
+    if (!account) {
+      alert("! Connect to Metamask or some kind of EVM Compatible Wallet ! ...")
+      throw new Error("Metamask is not installed");
+    }
+    
+    const tradeIntentEngine = new ethers.Contract(TradeContractAddress, TradeABI, signer);
+    //const tradeTx = await tradeIntentEngine.commandToTrade(aiResponse);
+    const tradeTx = await tradeIntentEngine.commandToTrade("WETH DAI 0.0009 UNISWAP");
+    // await tradeTx.wait()
+    console.log("Trade Transaction Hash => ",tradeTx)
+  }
+
+  useEffect(()=>{
+    if(startTX){
+      console.log("error aara bc")
+      commandToTradeStart();
+    }
+  },[startTX])
+
+  
   
 
   const handleKeyPress = (e) => {
@@ -344,11 +382,10 @@ const [test,setTest]=useState("");
                 <button onClick={connectWallet} >Connet Wallet!</button>
                 <br></br>
                 <br></br>
-                <button onClick={giveWeth}>Give fukcing weth!!</button>
-                <br></br>
-                <br></br>
-                <button onClick={handleCommandToTrade}> Click MFs !!!!!!!</button>
-              </div>
+                <button onClick={giveWeth}>Give weth for Testing </button>
+                </div>
+                {/* <button onClick={commandToTradeStart}>Start!!</button> */}
+                <button onClick={balanceOfDai}>Balance dai console</button>
             </div>
           </div>
         </div>

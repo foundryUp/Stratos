@@ -54,14 +54,23 @@ app.post("/api/generate-insights", async (req, res) => {
       return res.status(400).json({ error: "Prompt is required" });
     }
     const groq = createGroq({
-        baseURL: 'https://api.groq.com/openai/v1',
-        apiKey: process.env.GROQ_API_KEY,
-      });
+      baseURL: "https://api.groq.com/openai/v1",
+      apiKey: process.env.GROQ_API_KEY,
+    });
 
-      const { text } = await generateText({
-        model: groq('llama-3.1-405b-reasoning'),
-        prompt: 'What is love?',
-      });
+    const { text } = await generateText({
+      model: groq("llama3-70b-8192"),
+      maxSteps: 10,
+      system: SYSTEM_PROMPT,
+      tools,
+      prompt:
+        "i have some tokens give me insights on trading them i dont have a high risk apetite so kepe that in mind",
+      onStepFinish({ text, toolCalls, toolResults, finishReason, usage }) {
+        if (toolCalls[0]?.toolName) {
+          console.log(`[${toolCalls[0].toolName}]`, toolResults[0]?.result);
+        }
+      },
+    });
 
     console.log("Output:", text);
     let response = text + " uniswap"; // Modify the response as needed
@@ -74,6 +83,7 @@ app.post("/api/generate-insights", async (req, res) => {
     res.status(500).json({ error: "Failed to generate insights" });
   }
 });
+
 
 // Start the server
 app.listen(PORT, () => {
