@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.17;
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-contract UniswapRegistry {
+contract UniswapRegistry is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     // dai/weth means dai to weth
     // dai/weth => array[dai, weth]
 
@@ -14,41 +17,16 @@ contract UniswapRegistry {
     address constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
 
     constructor() {
+        _disableInitializers();
+    }
+
+    function initialize() public initializer {
+        __Ownable_init(msg.sender);
+        __UUPSUpgradeable_init();
         uniswapTokenToAddress["weth"] = WETH;
         uniswapTokenToAddress["usdc"] = USDC;
         uniswapTokenToAddress["dai"] = DAI;
         uniswapTokenToAddress["wbtc"] = WBTC;
-
-        //     // dai weth 01 uniswap
-        //     //dai/weth
-        //     // token 0
-        //     // token 1
-        //     // constant weth = ....
-        //     // constant
-        //     // uinswapPairsToPath["weth/dai"] = [
-        //     //     0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2,
-        //     //     0x6B175474E89094C44Da98b954EedeAC495271d0F
-        //     // ];
-        //     // uinswapPairsToPath["dai/weth"] = [
-        //     //     0x6B175474E89094C44Da98b954EedeAC495271d0F,
-        //     //     0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
-        //     // ];
-        //     // uinswapPairsToPath["weth/usdc"] = [
-        //     //     0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2,
-        //     //     0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
-        //     // ];
-        //     // uinswapPairsToPath["usdc/weth"] = [
-        //     //     0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,
-        //     //     0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
-        //     // ];
-        //     // uinswapPairsToPath["dai/wbtc"] = [
-        //     //     0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599,
-        //     //     0x6B175474E89094C44Da98b954EedeAC495271d0F
-        //     // ];
-        //     // uinswapPairsToPath["wbtc/dai"] = [
-        //     //     0x6B175474E89094C44Da98b954EedeAC495271d0F,
-        //     //     0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599
-        //     // ];
     }
 
     // ---------- Getter Functions --------------
@@ -58,4 +36,8 @@ contract UniswapRegistry {
     ) public view returns (address) {
         return uniswapTokenToAddress[tokenName];
     }
+
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal virtual onlyOwner override {}
 }
