@@ -252,7 +252,7 @@ const IntentAI = () => {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/generate-insights",
+        "http://ai-quant-trader-servers.onrender.com/api/generate-insights",
         {
           method: "POST",
           headers: {
