@@ -15,7 +15,9 @@ Your task:
 
 2. **Analyze the liquidity pool data** for the following two pools:
    - **First token pair**: 0x231B7589426Ffe1b75405526fC32aC09D44364c4 (WBTC/DAI)
-   - **Second token pair**: 0xa43fe16908251ee70ef74718545e4fe6c5ccec9f (PEPE/WETH)
+   - **Second token pair**: 0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc (WETH/USDC)
+   - **Third token pair**: 0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11 (WETH/DAI)
+   - **Fourth token pair**: 0xBb2b8038a1640196FbE3e38816F3e67Cba72D940 (WETH/WBTC)
 
    Fetch the liquidity pool stats for both token pairs using the "getLiquidityPoolPrice" tool.
 

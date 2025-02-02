@@ -101,8 +101,8 @@ const IntentAI = () => {
 
           {/* Updated Spline Container */}
           <div className="relative w-full h-[500px]">
-            <Spline scene="https://prod.spline.design/31iD8MVkM1IpbbeX/scene.splinecode" />
-          </div>
+          <Spline scene="https://prod.spline.design/6cBpFzCL5rJzFnLv/scene.splinecode" />
+</div>
         </div>
       </div>
 

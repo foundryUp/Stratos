@@ -32,8 +32,8 @@ export const createNaniTools = ({ account, walletClient, publicClient }) => ({
           throw new Error("Network response was not ok " + response.statusText);
         }
         const data = await response.json();
-        console.log(data); // Process your data here
-        return data;
+        console.log(data.pair); // Process your data here //Change this as it gives more detailed Data**
+        return data.pair;
       } catch (error) {
         console.error("Fetch error: ", error);
       }

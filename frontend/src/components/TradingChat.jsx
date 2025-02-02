@@ -4,8 +4,11 @@ import { Send, Image as ImageIcon, X, Camera, Loader, Sparkles, Command, Message
 import Spline from '@splinetool/react-spline';
 import { TradeABI, TradeContractAddress, ERC20ABI ,WETH_ABI} from '../constants/abi';
 import { ethers, getAddress } from 'ethers';
+import { useNavigate } from 'react-router-dom';
+
 
 const IntentAI = () => {
+    const navigate = useNavigate();
   const chatContainerRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
@@ -34,6 +37,7 @@ const [test,setTest]=useState("");
   const [amountTotrade, setAmountToTrade] = useState(null)
   const [addressfirstTokenToTrade, setaddressfirstTokenToTrade] = useState(null)
   const [startTX, setstartTX] = useState(null)
+  const [isApproved, setIsApproved] = useState(false)
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -89,12 +93,12 @@ const [test,setTest]=useState("");
   } 
 
   const balanceOfDai = async()=>{
-
     if (!account) {
       alert("! Connect to Metamask or some kind of EVM Compatible Wallet ! ...")
       throw new Error("Metamask is not installed");
     }
-
+    //weth 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
+    //dai 0x6B175474E89094C44Da98b954EedeAC495271d0F
     const daiContract = new ethers.Contract("0x6B175474E89094C44Da98b954EedeAC495271d0F", WETH_ABI, signer);
     const balance = await daiContract.balanceOf(account);
     console.log("dai balance : ",balance)
@@ -148,9 +152,7 @@ const [test,setTest]=useState("");
       }
       const approveTransaction  = await tokenToTrade.approve(TradeContractAddress, amountTotrade)
       await approveTransaction.wait(1);
-      if(approveTransaction){
-        setstartTX(true)
-      }
+      setIsApproved(true)
     }else{
       alert("connect metamask again!....")
     }
@@ -176,6 +178,10 @@ const [test,setTest]=useState("");
     // Set the first prompt and clear the input field
     setFirstPrompt(input);
     console.log("input : ", input);
+    if(input.toLowerCase()=="confirm"){
+      if(amountTotrade>0 && isApproved==true) 
+      commandToTradeStart();
+    }
     setInput('');
   
     try {
@@ -227,24 +233,12 @@ const [test,setTest]=useState("");
     // await tradeTx.wait()
     console.log("Trade Transaction Hash => ",tradeTx)
   }
-
-  useEffect(()=>{
-    if(startTX){
-      console.log("error aara bc")
-      commandToTradeStart();
-    }
-  },[startTX])
-
-  
-  
-
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   };
-
   return (
     <div className="flex min-h-screen bg-[#0a0014] relative overflow-hidden">
       {/* Background gradients */}
@@ -271,10 +265,10 @@ const [test,setTest]=useState("");
           {/* Title Section */}
           <div className="space-y-4">
             <h1 className="text-7xl font-bold tracking-tight">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-indigo-500 to-blue-500 animate-gradient-x">
+              <span onClick={() => navigate('/')} className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-indigo-500 to-blue-500 animate-gradient-x">
                 Intent
               </span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-200 to-indigo-300">
+              <span onClick={() => navigate('/')}  className="text-transparent bg-clip-text bg-gradient-to-r from-purple-200 to-indigo-300">
                 AI
               </span>
             </h1>
@@ -285,8 +279,9 @@ const [test,setTest]=useState("");
 
           {/* Updated Spline Container */}
           <div className="relative w-full h-[500px]">
-            {/* <Spline scene="https://prod.spline.design/31iD8MVkM1IpbbeX/scene.splinecode" /> */}    
-            <Spline scene="https://prod.spline.design/6cBpFzCL5rJzFnLv/scene.splinecode" />
+{/* \            <Spline scene="https://prod.spline.design/6cBpFzCL5rJzFnLv/scene.splinecode" /> */}
+                <Spline scene="https://prod.spline.design/kp7PSDuIOPgVm6F1/scene.splinecode" />
+
           </div>
         </div>
       </div>
@@ -391,7 +386,6 @@ const [test,setTest]=useState("");
           </div>
         </div>
       </div>
-
     </div>
   );
 };
