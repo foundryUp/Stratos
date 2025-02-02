@@ -21,4 +21,3 @@ contract DeployTradeIntent is Script {
    }
 
 }
-

@@ -1,71 +1,97 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {UniswapRegistry} from "./UniswapRegistry.sol";
-import {IUniswap} from "./IUniswap.sol";
+import {IAEth} from "./IAEth.sol";
 import {IERC20} from "./IERC20.sol";
 
 
-contract IntentEngine is UniswapRegistry {
+interface IAaveETHManager {
+    function depositETH() external payable;
+
+    function withdrawETH(uint256 amount) external;
+}
+
+contract aaveIntents {
+    IAaveETHManager public immutable aaveManager;
+    IAEth public immutable aEth;
     error InvalidSyntax();
     error InvalidCharacter();
+    address constant wethaddress = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     struct StringPart {
         uint256 start;
         uint256 end;
     }
 
-    function commandToTrade(
-        string calldata intent
-    ) external returns (uint256 amount, string memory protocol) {
-        address client = msg.sender;
+    constructor(address _aaveManager, address _aEthAddress) {
+        require(_aaveManager != address(0), "Invalid manager address");
+        require(_aEthAddress != address(0), "Invalid aETH address");
+        aaveManager = IAaveETHManager(_aaveManager);
+        aEth = IAEth(_aEthAddress);
+    }
+
+    function command(string calldata intent) external payable {
         bytes memory normalized = _lowercase(bytes(intent));
-        StringPart[] memory parts = _split(normalized, " ");
+        bytes32 action = _extraction(normalized);
 
-        if (parts.length != 4) revert InvalidSyntax();
-
-        string memory token1 = string(_getPart(normalized, parts[0])); //eth
-        string memory token2 = string(_getPart(normalized, parts[1])); //dai
-        bytes memory amountBytes = _extractAmount(normalized); //amount
-        string memory protocol = string(_getPart(normalized, parts[3])); //uniswap
-
-        amount = _toUint(amountBytes, 18, true);
-
-        if (
-            keccak256(abi.encodePacked(protocol)) ==
-            keccak256(abi.encodePacked("uniswap"))
-        ) {
-            address[] memory pathArray = new address[](2);
-            address addToken1 = getAddressFromString(token1);
-            address addToken2 = getAddressFromString(token2);
-            pathArray[0] = addToken1;
-            pathArray[1] = addToken2;
-            IERC20(pathArray[0]).transferFrom(client, address(this), amount);
-
-            IERC20(addToken1).approve(
-                0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D,
-                amount
-            );
-
-            // Issue : UniswapV2Router:
-            IUniswap(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D)
-                .swapExactTokensForTokens(
-                    amount,
-                    0,
-                    pathArray,
-                    client,
-                    block.timestamp + 3000
-                );
+        if (action == keccak256("deposit")) {
+            bytes memory amount = _extractAmount(normalized);
+            _deposit(_toUint(amount, 18, true));
+        } else if (action == keccak256("withdraw")) {
+            bytes memory amount = _extractAmount(normalized);
+            _withdraw(_toUint(amount, 18, false));
+            (bool ok, ) = payable(msg.sender).call{
+                value: address(this).balance
+            }("");
+            require(ok, "Withdrawal failed.");
+        } else {
+            revert InvalidSyntax();
         }
+    }
 
-        return (amount, protocol);
+    function _deposit(uint256 amount) internal {
+        require(msg.value == amount, "Ether sent mismatch with amount.");
+        aaveManager.depositETH{value: amount}();
+        uint256 aEthBalance = aEth.balanceOf(address(this));
+        aEth.transfer(msg.sender, aEthBalance);
+    }
+
+    function _withdraw(uint256 amount) internal {
+        aaveManager.withdrawETH(amount);
     }
 
     function _extractAmount(
         bytes memory normalizedIntent
     ) internal pure returns (bytes memory amount) {
         StringPart[] memory parts = _split(normalizedIntent, " ");
-        return _getPart(normalizedIntent, parts[2]); // Extract the "amount" part
+        if (parts.length != 3) revert InvalidSyntax(); // Expect "action amount ETH"
+        return _getPart(normalizedIntent, parts[1]); // Extract the "amount" part
+    }
+
+    function _slice(
+        bytes memory data,
+        uint256 start,
+        uint256 end
+    ) internal pure returns (bytes memory) {
+        require(end >= start && end <= data.length, "Invalid slice range");
+        bytes memory result = new bytes(end - start);
+        for (uint256 i = start; i < end; i++) {
+            result[i - start] = data[i];
+        }
+        return result;
+    }
+
+    function _extraction(
+        bytes memory normalizedIntent
+    ) internal pure returns (bytes32) {
+        uint256 len = normalizedIntent.length;
+        for (uint256 i = 0; i < len; i++) {
+            if (normalizedIntent[i] == 0x20) {
+                // Detect space
+                return keccak256(_slice(normalizedIntent, 0, i)); // Use the slice helper
+            }
+        }
+        revert InvalidSyntax(); // If no space is found, the input is invalid
     }
 
     function _split(
@@ -145,9 +171,9 @@ contract IntentEngine is UniswapRegistry {
             }
 
             if (scale) {
-                if (!hasDecimal) result *= 10 ** decimals;
+                if (!hasDecimal) result = 10 * decimals;
                 else if (decimalPlaces < decimals)
-                    result *= 10 ** (decimals - decimalPlaces);
+                    result = 10 * (decimals - decimalPlaces);
             }
         }
     }
@@ -155,31 +181,4 @@ contract IntentEngine is UniswapRegistry {
     receive() external payable {}
 
     fallback() external payable {}
-
-    // Getter Functions
-
-    function returnIntentValues(
-        string memory intent
-    )
-        public
-        view
-        returns (address, address, uint256 amount, string memory protocol)
-    {
-        bytes memory normalized = _lowercase(bytes(intent));
-        StringPart[] memory parts = _split(normalized, " ");
-
-        if (parts.length != 4) revert InvalidSyntax();
-
-        string memory token1 = string(_getPart(normalized, parts[0])); //eth
-        string memory token2 = string(_getPart(normalized, parts[1])); //dai
-        bytes memory amountBytes = _extractAmount(normalized); //amount
-        string memory protocol = string(_getPart(normalized, parts[3])); //uniswap
-        amount = _toUint(amountBytes, 18, true);
-
-        address addToken1 = getAddressFromString(token1);
-        address addToken2 = getAddressFromString(token2);
-
-        return (addToken1, addToken2, amount, protocol);
-    }
-
 }
