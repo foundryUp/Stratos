@@ -4,7 +4,7 @@ dotenv.config();
 import express from "express";
 import cors from "cors";
 import { SYSTEM_PROMPT } from "./config/prompt.js";
-import { createNaniTools } from "./tools/index.js";
+import { createFoundryUpTools } from "./tools/index.js";
 import { generateText } from "ai";
 import { createOpenAI as createGroq } from '@ai-sdk/openai';
 
