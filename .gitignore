@@ -2,3 +2,9 @@ out
 broadcast
 cache
 .env
+.DS_Store
+__init__.py
+__pycache__
+myenv
+venv
+Decisions
