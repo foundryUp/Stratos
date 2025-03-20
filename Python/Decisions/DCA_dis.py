@@ -1,10 +1,13 @@
 import time
 import openai
-from graph import fetch_graph_data
-from Algorithms.DCA import dca_investment, rebalance_portfolio
+from ..graph import fetch_graph_data
+from ..Algorithms.DCA import dca_investment, rebalance_portfolio
 
-# Optional: If you want the LLM to confirm or refine decisions:
-openai.api_key = "YOUR_OPENAI_API_KEY"
+from dotenv import load_dotenv
+import os
+load_dotenv()
+
+openai.api_key = os.getenv('OPENAI_API_KEY')
 
 def get_llm_decision(portfolio_before, portfolio_after, rebalance_details):
     """

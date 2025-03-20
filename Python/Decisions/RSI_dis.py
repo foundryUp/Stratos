@@ -1,9 +1,13 @@
 import time
 import openai
-from graph import fetch_graph_data
-from Algorithms.RSI import rsi_strategy_decision
+from ..graph import fetch_graph_data
+from ..Algorithms.RSI import rsi_strategy_decision
 
-openai.api_key = "YOUR_OPENAI_API_KEY"
+from dotenv import load_dotenv
+import os
+load_dotenv()
+
+openai.api_key = os.getenv('OPENAI_API_KEY')
 
 def get_llm_decision(algo_result):
     """

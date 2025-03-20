@@ -1,9 +1,12 @@
 import time
 import openai
-from graph import fetch_graph_data
-from Algorithms.MA import moving_average_crossover_decision
+from ..graph import fetch_graph_data
+from ..Algorithms.MA import moving_average_crossover_decision
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
-openai.api_key = "YOUR_OPENAI_API_KEY"
+openai.api_key = os.getenv('OPENAI_API_KEY')
 
 def get_llm_decision(algo_result):
     """

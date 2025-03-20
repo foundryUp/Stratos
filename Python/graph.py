@@ -10,7 +10,7 @@ QUERY = """
     orderBy: timestamp
     orderDirection: desc
     where: {pool: "0xc31e54c7a869b9fcbecc14363cf510d1c41fa443"}
-    first: 10
+    first: 100
   ) {
     pool {
       activeLiquidity
