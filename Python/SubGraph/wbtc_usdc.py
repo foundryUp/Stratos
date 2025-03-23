@@ -9,7 +9,7 @@ QUERY = """
   swaps(
     orderBy: timestamp
     orderDirection: desc
-    where: {pool: "0xc31e54c7a869b9fcbecc14363cf510d1c41fa443"}
+    where: {pool: "0x0e4831319a50228b9e450861297ab92dee15b44f"}
     first: 100
   ) {
     pool {
@@ -37,7 +37,7 @@ HEADERS = {
      "Authorization": "Bearer 1106e759dd7fe48331ba9d0f8a178875"  # Uncomment if needed
 }
 
-def fetch_graph_data():
+def fetch_graph_data_wbtc_usdc():
     """
     Fetch data from The Graph and return the JSON response.
     """
@@ -51,7 +51,7 @@ def fetch_graph_data():
         return None
 
 def main():
-    data = fetch_graph_data()
+    data = fetch_graph_data_wbtc_usdc()
     if data:
         print("Data fetched from subgraph:")
         print(data)
