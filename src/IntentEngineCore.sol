@@ -7,8 +7,13 @@ import {IERC20} from "./IERC20.sol";
 
 
 contract IntentEngine is UniswapRegistry {
+    //buy sell 
+    //buy means swap by usdt
+    //sell means swap usdt to something
     error InvalidSyntax();
     error InvalidCharacter();
+
+    address constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
 
     struct StringPart {
         uint256 start;
@@ -24,41 +29,58 @@ contract IntentEngine is UniswapRegistry {
 
         if (parts.length != 4) revert InvalidSyntax();
 
-        string memory token1 = string(_getPart(normalized, parts[0])); //eth
-        string memory token2 = string(_getPart(normalized, parts[1])); //dai
+        string memory command = string(_getPart(normalized, parts[0])); //buy / sell
+        string memory token = string(_getPart(normalized, parts[1])); //token
         bytes memory amountBytes = _extractAmount(normalized); //amount
         protocol = string(_getPart(normalized, parts[3])); //uniswap
 
         amount = _toUint(amountBytes, 18, true);
 
-        if (
-            keccak256(abi.encodePacked(protocol)) ==
-            keccak256(abi.encodePacked("uniswap"))
-        ) {
-            address[] memory pathArray = new address[](2);
-            address addToken1 = getAddressFromString(token1);
-            address addToken2 = getAddressFromString(token2);
-            pathArray[0] = addToken1;
-            pathArray[1] = addToken2;
-            IERC20(pathArray[0]).transferFrom(client, address(this), amount);
-
-            IERC20(addToken1).approve(
-                0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D,
-                amount
-            );
-
-            // Issue : UniswapV2Router:
-            IUniswap(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D)
-                .swapExactTokensForTokens(
-                    amount,
-                    0,
-                    pathArray,
-                    client,
-                    block.timestamp + 3000
-                );
+        //Buy 
+        if(keccak256(abi.encodePacked(command)) ==
+            keccak256(abi.encodePacked("buy"))){
+            if (
+                keccak256(abi.encodePacked(protocol)) ==
+                keccak256(abi.encodePacked("uniswap"))
+            ) {
+                swapThroughUniswapV2(USDT,getAddressFromString(token),client,amount);
+            }
         }
 
+        //Buy 
+        if(keccak256(abi.encodePacked(command)) ==
+            keccak256(abi.encodePacked("sell"))){
+            if (
+                keccak256(abi.encodePacked(protocol)) ==
+                keccak256(abi.encodePacked("uniswap"))
+            ) {
+                swapThroughUniswapV2(getAddressFromString(token),USDT,client,amount);
+            }
+        }
         return (amount, protocol);
+    }
+
+    function swapThroughUniswapV2(address token1, address token2,address client, uint256 amount) private {
+        address[] memory pathArray = new address[](2);
+        pathArray[0] = token1;
+        pathArray[1] = token2;
+        IERC20(pathArray[0]).transferFrom(client, address(this), amount);
+
+        IERC20(token1).approve(
+            0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D,
+            amount
+        );
+
+        // Issue : UniswapV2Router:
+        IUniswap(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D)
+            .swapExactTokensForTokens(
+                amount,
+                0,
+                pathArray,
+                client,
+                block.timestamp + 3000
+        );
+
     }
 
     function _extractAmount(

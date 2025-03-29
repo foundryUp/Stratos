@@ -7,3 +7,16 @@ forge script script/DeployTradeIntent.sol:DeployTradeIntent --rpc-url http://127
 ```bash
 anvil --fork-url https://eth-mainnet.g.alchemy.com/v2/KywLaq2zlVzePOhip0BY3U8ztfHkYDmo
 ```
+
+
+New Flow 
+
+Return a json
+{
+    "BTC HOLD 10",
+    "DAI SELL 20",
+    "WETH BUY 10"
+}
+
+user will select
+buy/sell
