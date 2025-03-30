@@ -17,6 +17,7 @@
         "moralis": "^2.27.2",
         "nodemon": "^3.1.9",
         "openai": "^4.80.0",
+        "python-shell": "^5.0.0",
         "tsconfig-paths": "^4.2.0",
         "viem": "2.21.53"
     },

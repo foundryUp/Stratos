@@ -22,3 +22,5 @@ user will select
 buy/sell
 
 python3 -m Python.Decisions.RSI_dis
+
+python3 -m Python.Decisions.RSI_server

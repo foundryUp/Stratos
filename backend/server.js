@@ -7,6 +7,14 @@ import { SYSTEM_PROMPT_TRADE,SYSTEM_PROMPT_GENERAL } from "./config/prompt.js";
 import { createFoundryUpTools } from "./tools/index.js";
 import { generateText } from "ai";
 import { createOpenAI as createGroq } from "@ai-sdk/openai";
+import { PythonShell } from "python-shell";
+import { spawn } from "child_process";
+
+// PythonShell.run('./Python/Decisions/RSI_.js', null, (err, results) => {
+//   if (err) throw err;
+//   console.log('Python says:', results.join('\n'));
+// });
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -84,6 +92,30 @@ app.post("/api/generalchat", async (req, res) => {
     console.error("Error generating general chat response:", error);
     res.status(500).json({ error: "Failed to generate response" });
   }
+});
+
+
+
+app.get('/python', (req, res) => {
+  // Spawn a Python process with the '-m' flag to run the module
+  const pythonProcess = spawn('python', ['-m', 'hello']);
+
+  let output = '';
+
+  // Collect data from the Python process stdout
+  pythonProcess.stdout.on('data', (data) => {
+    output += data.toString();
+  });
+
+  // Handle any errors
+  pythonProcess.stderr.on('data', (data) => {
+    console.error(`Python error: ${data}`);
+  });
+
+  // When the Python process closes, send the output as the response
+  pythonProcess.on('close', (code) => {
+    res.send(`Python process exited with code ${code}. Output: ${output}`);
+  });
 });
 
 // Start the server

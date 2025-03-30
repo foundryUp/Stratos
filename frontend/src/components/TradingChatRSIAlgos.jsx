@@ -30,14 +30,15 @@ function IntentTradingAlgo() {
   // This function simulates calling a backend algorithm.
   const generateSignals = async () => {
     setLoadingSignals(true);
+    console.log("lol")
+
     try {
       // Send the current balances to your backend
-      const response = await fetch('/api/generateSignals', {
-        method: 'POST',
+      const response = await fetch('http://127.0.0.1:5050/decisions', {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ balances })
       });
       const data = await response.json();
       // The returned data structure should be similar to:
@@ -88,7 +89,7 @@ function IntentTradingAlgo() {
         <div className="flex justify-center">
           <button
             onClick={generateSignals}
-            disabled={!walletConnected || loadingSignals}
+            // disabled={!walletConnected || loadingSignals}
             className="flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30 transition-all"
           >
             {loadingSignals ? 'Generating...' : 'Generate Trading Signals'}
