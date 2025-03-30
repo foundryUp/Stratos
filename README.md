@@ -24,3 +24,12 @@ buy/sell
 python3 -m Python.Decisions.RSI_dis
 
 python3 -m Python.Decisions.RSI_server
+
+
+high risk 
+low risk 
+short term 
+long term 
+{
+        ,true
+}

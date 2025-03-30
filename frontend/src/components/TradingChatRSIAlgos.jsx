@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Wallet, TrendingUp, ChevronUp, ChevronDown } from 'lucide-react';
 import { PriceChartWidget } from './PriceChartWidget'; // Adjust this path if necessary
 import { connectWallet as connectToWallet, fetchTokenBalances } from '../utils/web3functions';
@@ -13,6 +13,9 @@ function IntentTradingAlgo() {
   });
   const [tradingSignals, setTradingSignals] = useState(null);
   const [loadingSignals, setLoadingSignals] = useState(false);
+  const [riskLevel, setRiskLevel] = useState('low'); // default to low risk
+  const [term, setTerm] = useState('short'); // default to short term
+  const [errorMessage, setErrorMessage] = useState('');
 
   const connectWallet = async () => {
     try {
@@ -22,19 +25,28 @@ function IntentTradingAlgo() {
 
       const tokenBalances = await fetchTokenBalances(account);
       setBalances(tokenBalances);
+      setErrorMessage('');
     } catch (error) {
       console.error('Error connecting wallet:', error);
+      setErrorMessage('Failed to connect wallet. Please try again.');
     }
   };
 
-  // This function simulates calling a backend algorithm.
+  // This function calls your backend with the selected options.
+  // It checks if the wallet is connected first.
   const generateSignals = async () => {
+    if (!walletConnected) {
+      setErrorMessage('Please connect your wallet before generating signals.');
+      return;
+    }
+
     setLoadingSignals(true);
-    console.log("lol")
+    setErrorMessage('');
+    console.log("Generate trading signals with options:", { riskLevel, term });
 
     try {
-      // Send the current balances to your backend
-      const response = await fetch('http://127.0.0.1:5050/decisions', {
+      // Include risk and term options as query parameters
+      const response = await fetch(`http://127.0.0.1:5050/decisions?risk=${riskLevel}&term=${term}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
@@ -45,15 +57,15 @@ function IntentTradingAlgo() {
       // {
       //   "timestamp": 1743319056,
       //   "decisions": {
-      //     "BTC": { "action": "SELL", "position_size": 69, "rsi": 100.0, "price": 83137.6158732534 },
-      //     "DAI": { "action": "BUY", "position_size": 69, "rsi": 14.505420941079123, "price": 1.0 },
-      //     "WETH": { "action": "BUY", "position_size": 69, "rsi": 8.585120132570779, "price": 1.0 }
+      //     "BTC": { "action": "SELL", ... },
+      //     "DAI": { "action": "BUY", ... },
+      //     "WETH": { "action": "BUY", ... }
       //   }
       // }
-      // Since you need only the BUY/SELL decision, we can ignore the extra fields.
       setTradingSignals(data);
     } catch (error) {
       console.error('Error generating signals:', error);
+      setErrorMessage('Failed to generate signals. Please try again.');
     } finally {
       setLoadingSignals(false);
     }
@@ -85,15 +97,78 @@ function IntentTradingAlgo() {
       </div>
 
       <div className="max-w-7xl mx-auto p-8 space-y-8">
+        {/* Error Message */}
+        {errorMessage && (
+          <div className="bg-red-600 text-white px-4 py-2 rounded-md text-center">
+            {errorMessage}
+          </div>
+        )}
+
         {/* Generate Signals Section */}
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center">
           <button
             onClick={generateSignals}
-            // disabled={!walletConnected || loadingSignals}
             className="flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30 transition-all"
           >
             {loadingSignals ? 'Generating...' : 'Generate Trading Signals'}
           </button>
+
+          {/* Options: Risk Level and Term */}
+          <div className="flex flex-col md:flex-row gap-6 mt-4">
+            {/* Risk Level Options */}
+            <div className="flex flex-col items-center">
+              <p className="text-gray-400 mb-1">Risk Level</p>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setRiskLevel('low')}
+                  className={`px-4 py-2 rounded ${
+                    riskLevel === 'low'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-700 text-gray-300'
+                  }`}
+                >
+                  Low Risk
+                </button>
+                <button
+                  onClick={() => setRiskLevel('high')}
+                  className={`px-4 py-2 rounded ${
+                    riskLevel === 'high'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-700 text-gray-300'
+                  }`}
+                >
+                  High Risk
+                </button>
+              </div>
+            </div>
+
+            {/* Term Options */}
+            <div className="flex flex-col items-center">
+              <p className="text-gray-400 mb-1">Term</p>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setTerm('short')}
+                  className={`px-4 py-2 rounded ${
+                    term === 'short'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-700 text-gray-300'
+                  }`}
+                >
+                  Short Term
+                </button>
+                <button
+                  onClick={() => setTerm('long')}
+                  className={`px-4 py-2 rounded ${
+                    term === 'long'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-700 text-gray-300'
+                  }`}
+                >
+                  Long Term
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Trading Signals Section */}
@@ -113,7 +188,7 @@ function IntentTradingAlgo() {
                       {decision.action}
                     </span>
                   </div>
-                  {/* If you decide later to add more info like position_size or rsi, you can include them here */}
+                  {/* Optionally add more details like position_size or rsi */}
                 </div>
               ))}
             </div>
@@ -121,7 +196,7 @@ function IntentTradingAlgo() {
         )}
 
         {/* Price Chart Section */}
-        <div className="bg-[#1A1B3B] rounded-xl p-6 border border-gray-800"> 
+        <div className="bg-[#1A1B3B] rounded-xl p-6 border border-gray-800">
           <div className="flex items-center gap-2 mb-6">
             <TrendingUp size={24} className="text-blue-400" />
             <h2 className="text-xl font-semibold">Market Analysis</h2>
@@ -145,8 +220,8 @@ function IntentTradingAlgo() {
               </div>
               <div className="space-y-4">
                 {Object.entries(balances).map(([token, balance]) => (
-                  <div 
-                    key={token} 
+                  <div
+                    key={token}
                     className="flex justify-between items-center p-4 rounded-lg bg-[#0A0B1E]/50"
                   >
                     <div className="flex items-center gap-3">
