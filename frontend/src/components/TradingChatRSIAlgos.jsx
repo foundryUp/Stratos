@@ -1,131 +1,132 @@
-import React, { useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import React, { useEffect, useState } from 'react';
 import { Wallet, TrendingUp, ChevronUp, ChevronDown } from 'lucide-react';
+import { PriceChartWidget } from './PriceChartWidget'; // Adjust this path if necessary
+import { connectWallet as connectToWallet, fetchTokenBalances } from '../utils/web3functions';
 
-const data = [
-  { name: 'Jan', BTC: 42000, ETH: 3200 },
-  { name: 'Feb', BTC: 44500, ETH: 3100 },
-  { name: 'Mar', BTC: 47000, ETH: 3300 },
-  { name: 'Apr', BTC: 41000, ETH: 2900 },
-  { name: 'May', BTC: 39000, ETH: 2700 },
-  { name: 'Jun', BTC: 43000, ETH: 3000 },
-];
+function IntentTradingAlgo() {
+  const [walletConnected, setWalletConnected] = useState(false);
+  const [walletAddress, setWalletAddress] = useState('');
+  const [balances, setBalances] = useState({
+    WETH: '0.0',
+    DAI: '0.0',
+    WBTC: '0.0'
+  });
+  const [tradingSignals, setTradingSignals] = useState(null);
+  const [loadingSignals, setLoadingSignals] = useState(false);
 
-const tradingSignals = {
-  timestamp: 1743319056,
-  decisions: {
-    BTC: {
-      action: "SELL",
-      price: 83137.6158732534
-    },
-    DAI: {
-      action: "BUY",
-      price: 1.0
-    },
-    WETH: {
-      action: "BUY",
-      price: 1.0
+  const connectWallet = async () => {
+    try {
+      const { account } = await connectToWallet();
+      setWalletAddress(account);
+      setWalletConnected(true);
+
+      const tokenBalances = await fetchTokenBalances(account);
+      setBalances(tokenBalances);
+    } catch (error) {
+      console.error('Error connecting wallet:', error);
     }
-  }
-};
+  };
 
-function IntentAI2() {
-  const [isConnected, setIsConnected] = useState(false);
+  // This function simulates calling a backend algorithm.
+  const generateSignals = async () => {
+    setLoadingSignals(true);
+    try {
+      // Send the current balances to your backend
+      const response = await fetch('/api/generateSignals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ balances })
+      });
+      const data = await response.json();
+      // The returned data structure should be similar to:
+      // {
+      //   "timestamp": 1743319056,
+      //   "decisions": {
+      //     "BTC": { "action": "SELL", "position_size": 69, "rsi": 100.0, "price": 83137.6158732534 },
+      //     "DAI": { "action": "BUY", "position_size": 69, "rsi": 14.505420941079123, "price": 1.0 },
+      //     "WETH": { "action": "BUY", "position_size": 69, "rsi": 8.585120132570779, "price": 1.0 }
+      //   }
+      // }
+      // Since you need only the BUY/SELL decision, we can ignore the extra fields.
+      setTradingSignals(data);
+    } catch (error) {
+      console.error('Error generating signals:', error);
+    } finally {
+      setLoadingSignals(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#0A0B1E] text-gray-100">
       {/* Header Section */}
       <div className="bg-gradient-to-b from-[#1A1B3B] to-[#0A0B1E] p-8 border-b border-gray-800">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-center">
-            <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
-              Stratos
-            </h1>
-            <button
-              onClick={() => setIsConnected(!isConnected)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
-                isConnected
-                  ? 'bg-green-600/20 text-green-400 border border-green-500/30'
-                  : 'bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30'
-              }`}
-            >
-              <Wallet size={20} />
-              {isConnected ? 'Connected' : 'Connect Wallet'}
-            </button>
-          </div>
-          <p className="mt-4 text-gray-400">
-            Advanced Quantitative Trading Platform
-          </p>
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
+            Stratos
+          </h1>
+          <button
+            onClick={connectWallet}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
+              walletConnected
+                ? 'bg-green-600/20 text-green-400 border border-green-500/30'
+                : 'bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30'
+            }`}
+          >
+            <Wallet size={20} />
+            {walletConnected ? 'Connected' : 'Connect Wallet'}
+          </button>
         </div>
+        <p className="mt-4 text-gray-400 text-center">
+          Advanced Quantitative Trading Platform
+        </p>
       </div>
 
-      <div className="max-w-7xl mx-auto p-8">
-        {/* Trading Signals */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {Object.entries(tradingSignals.decisions).map(([token, decision]) => (
-            <div key={token} className="bg-[#1A1B3B] rounded-xl p-6 border border-gray-800">
-              <div className="flex justify-between items-start mb-4">
-                <h2 className="text-xl font-semibold">{token}</h2>
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  decision.action === 'BUY' 
-                    ? 'bg-green-600/20 text-green-400 border border-green-500/30'
-                    : 'bg-red-600/20 text-red-400 border border-red-500/30'
-                }`}>
-                  {decision.action}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold">
-                  ${decision.price.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  })}
-                </span>
-                {decision.action === 'BUY' ? (
-                  <ChevronUp className="text-green-400" size={20} />
-                ) : (
-                  <ChevronDown className="text-red-400" size={20} />
-                )}
-              </div>
-            </div>
-          ))}
+      <div className="max-w-7xl mx-auto p-8 space-y-8">
+        {/* Generate Signals Section */}
+        <div className="flex justify-center">
+          <button
+            onClick={generateSignals}
+            disabled={!walletConnected || loadingSignals}
+            className="flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30 transition-all"
+          >
+            {loadingSignals ? 'Generating...' : 'Generate Trading Signals'}
+          </button>
         </div>
 
-        {/* Price Chart */}
-        <div className="bg-[#1A1B3B] rounded-xl p-6 mb-8 border border-gray-800">
+        {/* Trading Signals Section */}
+        {tradingSignals && (
+          <div>
+            <h2 className="text-2xl font-semibold mb-4">Trading Signals</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {Object.entries(tradingSignals.decisions).map(([token, decision]) => (
+                <div key={token} className="bg-[#1A1B3B] rounded-xl p-6 border border-gray-800">
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-xl font-semibold">{token}</h3>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      decision.action === 'BUY'
+                        ? 'bg-green-600/20 text-green-400 border border-green-500/30'
+                        : 'bg-red-600/20 text-red-400 border border-red-500/30'
+                    }`}>
+                      {decision.action}
+                    </span>
+                  </div>
+                  {/* If you decide later to add more info like position_size or rsi, you can include them here */}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Price Chart Section */}
+        <div className="bg-[#1A1B3B] rounded-xl p-6 border border-gray-800"> 
           <div className="flex items-center gap-2 mb-6">
             <TrendingUp size={24} className="text-blue-400" />
             <h2 className="text-xl font-semibold">Market Analysis</h2>
           </div>
           <div className="h-[400px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2D2E4A" />
-                <XAxis dataKey="name" stroke="#6B7280" />
-                <YAxis stroke="#6B7280" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#1A1B3B',
-                    border: '1px solid #374151',
-                    borderRadius: '8px',
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="BTC"
-                  stroke="#3B82F6"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="ETH"
-                  stroke="#8B5CF6"
-                  strokeWidth={2}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <PriceChartWidget />
           </div>
         </div>
 
@@ -135,28 +136,35 @@ function IntentAI2() {
             <Wallet size={24} className="text-blue-400" />
             <h2 className="text-xl font-semibold">Portfolio Overview</h2>
           </div>
-          <div className="space-y-4">
-            {Object.entries(tradingSignals.decisions).map(([token, decision]) => (
-              <div key={token} className="flex justify-between items-center p-4 rounded-lg bg-[#0A0B1E]/50">
-                <div className="flex items-center gap-3">
-                  <span className="text-lg">{token}</span>
-                  <span className="text-sm text-gray-400">
-                    {token === 'BTC' ? '2.5' : token === 'WETH' ? '15.8' : '1000'} {token}
-                  </span>
-                </div>
-                <span className={decision.action === 'BUY' ? 'text-green-400' : 'text-red-400'}>
-                  ${decision.price.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  })}
-                </span>
+          {walletConnected ? (
+            <div>
+              <div className="mb-4">
+                <p className="text-gray-400 mb-1">Wallet:</p>
+                <p className="text-gray-200 break-all text-sm">{walletAddress}</p>
               </div>
-            ))}
-          </div>
+              <div className="space-y-4">
+                {Object.entries(balances).map(([token, balance]) => (
+                  <div 
+                    key={token} 
+                    className="flex justify-between items-center p-4 rounded-lg bg-[#0A0B1E]/50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">{token}</span>
+                      <span className="text-sm text-gray-400">
+                        {balance} {token}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-gray-400">Please connect your wallet to view your portfolio.</p>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-export default IntentAI2;
+export default IntentTradingAlgo;
