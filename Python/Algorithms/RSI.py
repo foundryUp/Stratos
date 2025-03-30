@@ -1,4 +1,3 @@
-
 #############################SHORT TERM HIGH RISK TRADING STRATEGY#############################
 #############################  RSI   #############################
 
@@ -25,23 +24,20 @@ def extract_weth_prices(graph_data):
     swaps = graph_data.get("data", {}).get("swaps", [])
     prices = []
     # Reverse the list so that the earliest swap is first.
+    # print("swapsL",swaps)
     for swap in reversed(swaps):
         price = None
-        token_in = swap.get("tokenIn", {})
-        token_out = swap.get("tokenOut", {})
+        token_in = swap.get("tokenOut", {})
         # We assume WETH is the asset of interest.
-        if token_in.get("symbol") == "WETH":
-            try:
-                price = float(token_in.get("lastPriceUSD", "0"))
-            except ValueError:
-                price = 0.0
-        elif token_out.get("symbol") == "WETH":
-            try:
-                price = float(token_out.get("lastPriceUSD", "0"))
-            except ValueError:
-                price = 0.0
+        # print(token_in)
+        try:
+            price = float(token_in.get("lastPriceUSD", "0"))
+            print(price)
+        except ValueError:
+            price = 0.0
         if price and price > 0:
             prices.append(price)
+    # print(prices)
     return prices
 
 def compute_rsi(prices, period=5):
@@ -115,6 +111,7 @@ def rsi_strategy_decision(graph_data, rsi_period=5, overbought_threshold=70, ove
         - 'latest_price': The most recent WETH price.
         - 'price_series': The full extracted price series.
     """
+    print(graph_data)
     prices = extract_weth_prices(graph_data)
     if not prices:
         return {"decision": "NO_DATA", "reason": "No valid price data found."}
