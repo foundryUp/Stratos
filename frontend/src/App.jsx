@@ -5,6 +5,7 @@ import GeneralChat from './components/GeneralChat';
 import TradingChat from './components/TradingChat';
 import Homepage from './components/Homepage';
 import TokenPortfolio from './components/TokenPortfolio';
+import IntentAI2 from "./components/TradingChatRSIAlgos.jsx"
 
 function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -18,6 +19,7 @@ function App() {
             <Route path="/general" element={<GeneralChat />} />
             <Route path="/trading" element={<TradingChat />} />
             <Route path="/tokenPortfolio" element={<TokenPortfolio />} />
+            <Route path="/tradingChatRSIAlgos" element={<IntentAI2 />} />
           </Routes>
         </main>
       </div>
