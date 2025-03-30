@@ -1,7 +1,19 @@
-import React, { useState } from 'react';
-import { Wallet, TrendingUp, ChevronUp, ChevronDown } from 'lucide-react';
-import { PriceChartWidget } from './PriceChartWidget'; // Adjust this path if necessary
-import { connectWallet as connectToWallet, fetchTokenBalances } from '../utils/web3functions';
+import React, { useState, useEffect } from 'react';
+import { Wallet, TrendingUp } from 'lucide-react';
+import { PriceChartWidget } from './PriceChartWidget'; // Adjust path if necessary
+import { 
+  connectWallet as connectToWallet, 
+  fetchTokenBalances,
+  commandToTradeStart,
+  handleTokensApproveTrading  // New approval function
+} from '../utils/web3functions';
+
+// Mapping from token symbols to their contract addresses
+const tokenAddresses = {
+  BTC: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599", // WBTC address (as example)
+  WETH: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+  DAI: "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+};
 
 function IntentTradingAlgo() {
   const [walletConnected, setWalletConnected] = useState(false);
@@ -9,21 +21,28 @@ function IntentTradingAlgo() {
   const [balances, setBalances] = useState({
     WETH: '0.0',
     DAI: '0.0',
-    WBTC: '0.0'
+    BTC: '0.0'
   });
   const [tradingSignals, setTradingSignals] = useState(null);
   const [loadingSignals, setLoadingSignals] = useState(false);
   const [riskLevel, setRiskLevel] = useState('low'); // default to low risk
   const [term, setTerm] = useState('short'); // default to short term
   const [errorMessage, setErrorMessage] = useState('');
+  // State to track the input amount per token
+  const [inputAmounts, setInputAmounts] = useState({});
+  // State to track approval status per token symbol used for approval
+  const [approvedTokens, setApprovedTokens] = useState({});
 
   const connectWallet = async () => {
+    console.log("Attempting to connect wallet...");
     try {
       const { account } = await connectToWallet();
+      console.log("Wallet connected, account:", account);
       setWalletAddress(account);
       setWalletConnected(true);
 
       const tokenBalances = await fetchTokenBalances(account);
+      console.log("Token balances fetched:", tokenBalances);
       setBalances(tokenBalances);
       setErrorMessage('');
     } catch (error) {
@@ -32,37 +51,35 @@ function IntentTradingAlgo() {
     }
   };
 
-  // This function calls your backend with the selected options.
-  // It checks if the wallet is connected first.
+  // For testing signals before passing to trade function
   const generateSignals = async () => {
     if (!walletConnected) {
       setErrorMessage('Please connect your wallet before generating signals.');
       return;
     }
 
+    console.log("Generating signals with risk level:", riskLevel, "and term:", term);
     setLoadingSignals(true);
     setErrorMessage('');
-    console.log("Generate trading signals with options:", { riskLevel, term });
-
     try {
-      // Include risk and term options as query parameters
-      const response = await fetch(`http://127.0.0.1:5050/decisions?risk=${riskLevel}&term=${term}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+      // Custom output for testing:
+      const customData = {
+        timestamp: Date.now(),
+        decisions: {
+          BTC: { action: "BUY" },  // Buying BTC using WETH
+          DAI: { action: "HOLD" },
+          WETH: { action: "SELL" } // Selling WETH
+        }
+      };
+      console.log("Custom signals generated:", customData);
+      setTradingSignals(customData);
+      // Prepopulate inputAmounts for tokens with BUY or SELL signals
+      setInputAmounts({
+        BTC: "0.1",
+        WETH: "0.1"
       });
-      const data = await response.json();
-      // The returned data structure should be similar to:
-      // {
-      //   "timestamp": 1743319056,
-      //   "decisions": {
-      //     "BTC": { "action": "SELL", ... },
-      //     "DAI": { "action": "BUY", ... },
-      //     "WETH": { "action": "BUY", ... }
-      //   }
-      // }
-      setTradingSignals(data);
+      // Reset approvedTokens to ensure fresh approvals on new signals
+      setApprovedTokens({});
     } catch (error) {
       console.error('Error generating signals:', error);
       setErrorMessage('Failed to generate signals. Please try again.');
@@ -71,10 +88,66 @@ function IntentTradingAlgo() {
     }
   };
 
+  // When user clicks Trade, approval happens on-demand.
+  const handleTrade = async (token, decision) => {
+    console.log(`Handling trade for token: ${token}`);
+    const amount = inputAmounts[token];
+    console.log("Retrieved input amount:", amount);
+    if (!amount || isNaN(amount)) {
+      alert('Please enter a valid amount.');
+      return;
+    }
+    // For BUY trades, approval is for WETH; for SELL, it's the token itself.
+    const tokenToApprove =
+      decision.action.toUpperCase() === 'BUY'
+        ? tokenAddresses.WETH
+        : tokenAddresses[token.toUpperCase()];
+
+    if (!tokenToApprove) {
+      alert(`No token address found for ${token}`);
+      return;
+    }
+
+    // Check and perform approval if needed
+    if (!approvedTokens[token]) {
+      try {
+        console.log(`Approving ${decision.action.toUpperCase() === 'BUY' ? 'WETH' : token} for amount: ${amount}...`);
+        const approved = await handleTokensApproveTrading(amount, tokenToApprove);
+        if (approved) {
+          console.log(`${decision.action.toUpperCase() === 'BUY' ? 'WETH' : token} approved.`);
+          setApprovedTokens((prev) => ({ ...prev, [token]: true }));
+        }
+      } catch (error) {
+        console.error(`Error approving ${token}:`, error);
+        alert(`Approval failed for ${token}. Check console for details.`);
+        return;
+      }
+    }
+    
+    // Force action and token symbol to uppercase for consistency
+    const action = decision.action.toUpperCase();
+    const tokenSymbol = token.toUpperCase();
+    // Construct command string: "ACTION TOKEN Amount Uniswap"
+    // The command itself doesn't change; your contract should know that for BUY,
+    // WETH will be used (via the approval).
+    const command = `${action} ${tokenSymbol} ${amount} Uniswap`;
+    console.log("Constructed trade command:", command);
+    
+    try {
+      console.log("Passing trade command to commandToTradeStart...");
+      const result = await commandToTradeStart(command);
+      console.log("Trade execution result:", result);
+      alert(`Trade executed: ${command}`);
+    } catch (error) {
+      console.error("Trade execution failed:", error);
+      alert("Trade execution failed. Check console for details.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0A0B1E] text-gray-100">
       {/* Header Section */}
-      <div className="bg-gradient-to-b from-[#1A1B3B] to-[#0A0B1E] p-8 border-b border-gray-800">
+      <div className="bg-gradient-to-b from-[#1A1B3B] to-[#0B1B1E] p-8 border-b border-gray-800">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
             Stratos
@@ -112,8 +185,6 @@ function IntentTradingAlgo() {
           >
             {loadingSignals ? 'Generating...' : 'Generate Trading Signals'}
           </button>
-
-          {/* Options: Risk Level and Term */}
           <div className="flex flex-col md:flex-row gap-6 mt-4">
             {/* Risk Level Options */}
             <div className="flex flex-col items-center">
@@ -141,7 +212,6 @@ function IntentTradingAlgo() {
                 </button>
               </div>
             </div>
-
             {/* Term Options */}
             <div className="flex flex-col items-center">
               <p className="text-gray-400 mb-1">Term</p>
@@ -183,12 +253,35 @@ function IntentTradingAlgo() {
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                       decision.action === 'BUY'
                         ? 'bg-green-600/20 text-green-400 border border-green-500/30'
-                        : 'bg-red-600/20 text-red-400 border border-red-500/30'
+                        : decision.action === 'SELL'
+                        ? 'bg-red-600/20 text-red-400 border border-red-500/30'
+                        : 'bg-gray-600/20 text-gray-400 border border-gray-500/30'
                     }`}>
                       {decision.action}
                     </span>
                   </div>
-                  {/* Optionally add more details like position_size or rsi */}
+                  {(decision.action === 'BUY' || decision.action === 'SELL') && (
+                    <div>
+                      <label htmlFor={`amount-${token}`} className="block text-sm text-gray-400">
+                        Enter Amount (in ETH):
+                      </label>
+                      <input
+                        id={`amount-${token}`}
+                        type="text"
+                        value={inputAmounts[token] || '0.1'}
+                        onChange={(e) =>
+                          setInputAmounts((prev) => ({ ...prev, [token]: e.target.value }))
+                        }
+                        className="mt-1 block w-full bg-gray-700 border border-gray-600 text-white rounded-md p-2"
+                      />
+                      <button
+                        onClick={() => handleTrade(token, decision)}
+                        className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                      >
+                        Trade
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

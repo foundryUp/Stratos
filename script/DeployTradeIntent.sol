@@ -3,7 +3,9 @@
 pragma solidity ^0.8.17;
 
 import {Script} from "forge-std/Script.sol"; //import Script from Foundry Standard Lib
-import  {IntentEngine} from "../src/IntentEngineTrade.sol"; //import contract to deploy
+// import  {IntentEngine} from "../src/IntentEngineTrade.sol"; //import contract to deploy //old one 
+import  {IntentEngine} from "../src/IntentEngineCore.sol"; //import contract to deploy //old one 
+
 
 contract DeployTradeIntent is Script {
 

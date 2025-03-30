@@ -157,3 +157,34 @@ export async function commandToTradeStart(aiResponse) {
     throw error;
   }
 }
+
+
+
+export async function handleTokensApproveTrading(amountToTrade,tokenAddress) {
+  if (!web3 || !currentAccount) {
+    throw new Error("Wallet not connected");
+  }
+  
+  const tokenContract = new web3.eth.Contract(ERC20ABI, tokenAddress);
+  
+  try {
+    const balance = await tokenContract.methods.balanceOf(currentAccount).call();
+    console.log("Token balance:", balance);
+    
+    // Make sure amountToTrade is a number, not already in wei
+    const amountInWei = web3.utils.toWei(amountToTrade.toString(), "ether");
+    console.log("Amount to trade in wei:", amountInWei);
+    console.log("Approving tokens...");
+    
+    // Use the correct amount for approval
+    const approveTx = await tokenContract.methods
+      .approve(TradeContractAddress, amountInWei)
+      .send({ from: currentAccount });
+      
+    console.log("Tokens approved. Tx:", approveTx);
+    return true;
+  } catch (error) {
+    console.error("Error approving tokens:", error);
+    throw error;
+  }
+}

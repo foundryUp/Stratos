@@ -13,7 +13,8 @@ contract IntentEngine is UniswapRegistry {
     error InvalidSyntax();
     error InvalidCharacter();
 
-    address constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
+    // address constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
+    address constant USDT = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; //Right now for testing its weth warna at time of trading is USDT
 
     struct StringPart {
         uint256 start;
