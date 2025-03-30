@@ -20,3 +20,5 @@ Return a json
 
 user will select
 buy/sell
+
+python3 -m Python.Decisions.RSI_dis
