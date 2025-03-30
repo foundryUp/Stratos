@@ -7,8 +7,6 @@ forge script script/DeployTradeIntent.sol:DeployTradeIntent --rpc-url http://127
 ```bash
 anvil --fork-url https://eth-mainnet.g.alchemy.com/v2/KywLaq2zlVzePOhip0BY3U8ztfHkYDmo
 ```
-
-
 New Flow 
 
 Return a json
@@ -33,3 +31,10 @@ long term
 {
         ,true
 }
+
+###### TO DO
+problem in code for testing use hora h weth for testing // usey fix kr to usdt just uncomment
+similarly in frontend part if buy h to approve lo usdt ka!!
+
+arbitrum mein deploy krenge to waha erc20s ka address change hojayega and uniswap router wagera ka bhi
+data kahi achi api se lao rather than graphs
