@@ -4,8 +4,8 @@
 
 def extract_weth_prices(graph_data):
     """
-    Extract a chronological list of WETH prices in USD from the subgraph swap data.
-    The JSON structure is assumed to be:
+    Extracts a chronological list of WETH prices in USD from the subgraph swap data.
+    Assumes that the JSON structure is:
     {
       "data": {
         "swaps": [
@@ -19,30 +19,26 @@ def extract_weth_prices(graph_data):
       }
     }
     
-    Since swaps are ordered by timestamp in descending order in the query,
-    we reverse the list to obtain chronological order (oldest first).
+    Since the query orders swaps by timestamp in descending order, this function reverses the list
+    to create a chronological (oldest-first) price series.
     """
     swaps = graph_data.get("data", {}).get("swaps", [])
     prices = []
-    # Reverse the swap list to have prices from oldest to newest.
+    # Reverse the list so that the earliest swap is first.
+    # print("swapsL",swaps)
     for swap in reversed(swaps):
         price = None
-        token_in = swap.get("tokenIn", {})
-        token_out = swap.get("tokenOut", {})
-        # Identify which token is WETH.
-        if token_in.get("symbol") == "WETH":
-            try:
-                price = float(token_in.get("lastPriceUSD", "0"))
-            except ValueError:
-                price = 0.0
-        elif token_out.get("symbol") == "WETH":
-            try:
-                price = float(token_out.get("lastPriceUSD", "0"))
-            except ValueError:
-                price = 0.0
-        # Only include valid, positive prices.
+        token_in = swap.get("tokenOut", {})
+        # We assume WETH is the asset of interest.
+        # print(token_in)
+        try:
+            price = float(token_in.get("lastPriceUSD", "0"))
+            print(price)
+        except ValueError:
+            price = 0.0
         if price and price > 0:
             prices.append(price)
+    # print(prices)
     return prices
 
 def compute_moving_average(prices, window):

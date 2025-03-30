@@ -38,3 +38,11 @@ similarly in frontend part if buy h to approve lo usdt ka!!
 
 arbitrum mein deploy krenge to waha erc20s ka address change hojayega and uniswap router wagera ka bhi
 data kahi achi api se lao rather than graphs
+
+
+python3 -m Python.Decisions.RSI_server
+
+api testing krni hogi like python folder add krdiya h Shorya ne and frontend with smart contracts chal gya h 
+1. api testing 
+2. full flow testing on anvil
+3. fix json coming from apis boht saara aar ashort kro bas sell buy hold

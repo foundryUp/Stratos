@@ -1,0 +1,128 @@
+def extract_USDC_prices(graph_data):
+    """
+    Extracts a chronological list of WETH prices in USD from the subgraph swap data.
+    Assumes that the JSON structure is:
+    {
+      "data": {
+        "swaps": [
+          {
+            "pool": { ... },
+            "tokenIn": { "lastPriceUSD": "xxx", "symbol": "..." },
+            "tokenOut": { "lastPriceUSD": "xxx", "symbol": "..." }
+          },
+          ...
+        ]
+      }
+    }
+    
+    Since the query orders swaps by timestamp in descending order, this function reverses the list
+    to create a chronological (oldest-first) price series.
+    """
+    swaps = graph_data.get("data", {}).get("swaps", [])
+    prices = []
+    # Reverse the list so that the earliest swap is first.
+    # print("swapsL",swaps)
+    for swap in reversed(swaps):
+        price = None
+        token_in = swap.get("tokenIn", {})
+        # We assume WETH is the asset of interest.
+        # print(token_in)
+        try:
+            price = float(token_in.get("lastPriceUSD", "0"))
+            print(price)
+        except ValueError:
+            price = 0.0
+        if price and price > 0:
+            prices.append(price)
+    # print(prices)
+    return prices
+
+def compute_ema(prices, period):
+    """Robust EMA calculation with input validation"""
+    if not prices or len(prices) < period:
+        return []
+    
+    ema_values = []
+    smoothing = 2 / (period + 1)
+    
+    # Simple moving average as initial EMA
+    try:
+        current_ema = sum(prices[:period]) / period
+    except ZeroDivisionError:
+        return []
+    
+    ema_values.append(current_ema)
+    
+    for price in prices[period:]:
+        current_ema = (price - current_ema) * smoothing + current_ema
+        ema_values.append(current_ema)
+    
+    # Pad with None for alignment
+    return [None]*(period-1) + ema_values
+
+def compute_macd(prices, short=12, long=26, signal=9):
+    """MACD calculation with alignment guarantees"""
+    if len(prices) < max(short, long):
+        return [], []
+    
+    # Compute EMAs with proper alignment
+    short_ema = compute_ema(prices, short)
+    long_ema = compute_ema(prices, long)
+    
+    # Calculate MACD line (ensure equal length)
+    min_length = min(len(short_ema), len(long_ema))
+    macd_line = [
+        (s - l) if s is not None and l is not None else None
+        for s, l in zip(short_ema[:min_length], long_ema[:min_length])
+    ]
+    
+    # Calculate signal line using valid MACD values
+    valid_macd = [m for m in macd_line if m is not None]
+    if len(valid_macd) >= signal:
+        signal_ema = compute_ema(valid_macd, signal)
+        signal_padding = len(macd_line) - len(signal_ema)
+        signal_line = [None]*signal_padding + signal_ema
+    else:
+        signal_line = [None]*len(macd_line)
+    
+    return macd_line, signal_line
+
+def macd_strategy_decision(graph_data):
+    """Final decision logic with safety checks"""
+    prices = extract_USDC_prices(graph_data)
+    
+    if not prices:
+        return {"decision": "NO_DATA", "reason": "Empty price series"}
+    
+    macd, signal = compute_macd(prices)
+    
+    # Ensure we have at least 2 valid points for crossover detection
+    valid_macd = [m for m in macd[-2:] if m is not None]
+    valid_signal = [s for s in signal[-2:] if s is not None]
+    
+    if len(valid_macd) < 2 or len(valid_signal) < 2:
+        return {"decision": "INSUFFICIENT_DATA", "reason": "Need 2+ MACD/Signal points"}
+    
+    latest_price = prices[-1]
+    current_macd = valid_macd[-1]
+    current_signal = valid_signal[-1]
+    
+    # Crossover detection
+    prev_macd = valid_macd[-2]
+    prev_signal = valid_signal[-2]
+    
+    decision = "HOLD"
+    if current_macd > current_signal and prev_macd <= prev_signal:
+        decision = "BUY"
+    elif current_macd < current_signal and prev_macd >= prev_signal:
+        decision = "SELL"
+    
+    return {
+        "decision": decision,
+        "macd": current_macd,
+        "signal": current_signal,
+        "latest_price": latest_price,
+        "price_series": prices,
+        "macd_line": macd,
+        "signal_line": signal
+    }
