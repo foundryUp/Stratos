@@ -37,7 +37,7 @@ function Homepage() {
             <Brain size={80} className="text-blue-500" />
           </div>
           <h1 className="text-6xl md:text-8xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-pulse">
-            IntentAI
+            Stratos
           </h1>
           <p className="text-xl md:text-2xl mb-12 max-w-2xl text-gray-300">
             Unleash the power of intelligent conversations with our next-generation AI assistant

@@ -4,6 +4,7 @@ import { MessageSquare, TrendingUp, Menu } from 'lucide-react';
 import GeneralChat from './components/GeneralChat';
 import TradingChat from './components/TradingChat';
 import Homepage from './components/Homepage';
+import TokenPortfolio from './components/TokenPortfolio';
 
 function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -16,6 +17,7 @@ function App() {
             <Route path="/" element={<Homepage />} />
             <Route path="/general" element={<GeneralChat />} />
             <Route path="/trading" element={<TradingChat />} />
+            <Route path="/tokenPortfolio" element={<TokenPortfolio />} />
           </Routes>
         </main>
       </div>
