@@ -19,12 +19,89 @@ const IntentAI = () => {
   const [outputPrompt, setOutputPrompt] = useState(""); //4 words
   const [contractAddress, setContractAddress] = useState('');
   const [contractABI, setContractABI] = useState('');
+    const [account, setAccount] = useState("");
+    
+    const [aiResponse, setAiResponse] = useState("");
+    const [amountTotrade, setAmountToTrade] = useState(null);
+    const [addressfirstTokenToTrade, setAddressFirstTokenToTrade] = useState(null);
+    const [isApproved, setIsApproved] = useState(false);
+    const [balances, setBalances] = useState({});
 
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages]);
+
+  const handleConnectWallet = async () => {
+      try {
+        const { account } = await connectWallet();
+        setAccount(account);
+      } catch (error) {
+        console.error("Wallet connection failed:", error);
+      }
+    };
+
+    const handleSend = async () => {
+        console.log("handleSend triggered with input:", input);
+        let balancesObj = {};
+        try {
+          balancesObj = await fetchTokenBalances(account);
+        } catch (error) {
+          console.error("Error fetching balances:", error);
+        }
+        console.log("User Token Balances:", balancesObj);
+        if (!input.trim()) {
+          console.warn("Input is empty");
+          return;
+        }
+        // Add user input to chat messages
+        setMessages((prev) => [...prev, { type: "user", content: input }]);
+        if (input.toLowerCase() === "confirm") {
+          // If already approved and amountTotrade exists, execute trade
+          if (amountTotrade && isApproved) {
+            try {
+              await commandToTradeStart(aiResponse);
+            } catch (error) {
+              console.error("Trade command failed:", error);
+            }
+          }
+          setMessages((prev) => [
+            ...prev,
+            { type: "bot", content: "Please wait for transaction to be done...." },
+          ]);
+          return;
+        }
+        setInput("");
+        setIsLoading(true);
+        try {
+          const response = await fetch("http://localhost:5000/api/generalchat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: input, balances: balancesObj }),
+          });
+          if (!response.ok) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                type: "bot",
+                content: "Servers are busy. Please try again in 30 seconds.",
+              },
+            ]);
+            setIsLoading(false);
+            return;
+          }
+          const data = await response.json();
+          console.log("Response from backend:", data);
+          setAiResponse(data.response);
+          const [fromToken, toToken, amount, platform] = data.response.split(" ");
+          const responseForUser = data.response;
+          setMessages((prev) => [...prev, { type: "bot", content: responseForUser }]);
+        } catch (error) {
+          console.error("Error fetching insights:", error);
+        }
+        setIsLoading(false);
+      };
 
   const simulateTyping = async (message) => {
     setIsLoading(true);
@@ -43,15 +120,6 @@ const IntentAI = () => {
           : "👋 Hi there! I'm your AI assistant. How can I help you today?"
       }
     ]);
-  };
-
-  const handleSend = async () => {
-    if (!input.trim()) return;
-    setMessages(prev => [...prev, { type: 'user', content: input }]);
-    setInput('');
-    await simulateTyping({
-      content: `Here's a sample response for your message in ${activeTab} mode.`
-    });
   };
 
   const handleKeyPress = (e) => {
