@@ -57,12 +57,32 @@ function IntentTradingAlgo() {
       setErrorMessage('Please connect your wallet before generating signals.');
       return;
     }
-
+  
     console.log("Generating signals with risk level:", riskLevel, "and term:", term);
     setLoadingSignals(true);
     setErrorMessage('');
     try {
-      // Custom output for testing:
+      // Uncomment the following block to use the API call
+      const response = await fetch(
+        `http://localhost:5050/decisions?risk=${riskLevel}&term=${term}`,
+        { method: 'GET', headers: { 'Content-Type': 'application/json' } }
+      );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log("Signals received from API:", data);
+      setTradingSignals(data);
+      // Prepopulate inputAmounts for tokens with BUY or SELL signals
+      setInputAmounts({
+        BTC: "0.1",
+        WETH: "0.1"
+      });
+      // Reset approvedTokens to ensure fresh approvals on new signals
+      setApprovedTokens({});
+  
+      // --- Custom output for testing (commented out) ---
+      /*
       const customData = {
         timestamp: Date.now(),
         decisions: {
@@ -73,13 +93,12 @@ function IntentTradingAlgo() {
       };
       console.log("Custom signals generated:", customData);
       setTradingSignals(customData);
-      // Prepopulate inputAmounts for tokens with BUY or SELL signals
       setInputAmounts({
         BTC: "0.1",
         WETH: "0.1"
       });
-      // Reset approvedTokens to ensure fresh approvals on new signals
       setApprovedTokens({});
+      */
     } catch (error) {
       console.error('Error generating signals:', error);
       setErrorMessage('Failed to generate signals. Please try again.');
@@ -87,6 +106,7 @@ function IntentTradingAlgo() {
       setLoadingSignals(false);
     }
   };
+  
 
   // When user clicks Trade, approval happens on-demand.
   const handleTrade = async (token, decision) => {
