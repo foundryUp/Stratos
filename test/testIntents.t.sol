@@ -2,8 +2,8 @@
 pragma solidity ^0.8.17;
 
 import {Test, console} from "forge-std/Test.sol";
-import {CompoundIntents} from "../src/CompoundIntents.sol";
-import {CompoundETHManager, ICEth} from "../src/CompoundETHManager2.sol";
+import {CompoundIntents} from "../src/compound/CompoundIntents.sol";
+import {CompoundETHManager, ICEth} from "../src/compound/CompoundETHManager2.sol";
 
 contract CompoundIntentsTest is Test {
     CompoundIntents public intentsEngine;

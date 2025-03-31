@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 import {Test, console} from "forge-std/Test.sol";
 import {IntentEngine} from "../src/IntentEngineTrade.sol";
 import {IUniswap} from "../src/IUniswap.sol";
-import {IERC20} from "../src/IERC20.sol";
+import {IERC20} from "../src/utils/IERC20.sol";
 
 contract TradeTest is Test {
     // Contracts

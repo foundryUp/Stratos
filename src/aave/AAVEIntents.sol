@@ -2,7 +2,7 @@
 pragma solidity ^0.8.17;
 
 import {IAEth} from "./IAEth.sol";
-import {IERC20} from "./IERC20.sol";
+import {IERC20} from "../utils/IERC20.sol";
 
 
 interface IAaveETHManager {

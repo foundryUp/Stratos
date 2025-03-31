@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import {UniswapRegistry} from "./UniswapRegistry.sol";
 import {IUniswap} from "./IUniswap.sol";
-import {IERC20} from "./IERC20.sol";
+import {IERC20} from "./utils/IERC20.sol";
 
 
 contract IntentEngine is UniswapRegistry {
@@ -47,7 +47,7 @@ contract IntentEngine is UniswapRegistry {
             }
         }
 
-        //Buy 
+        //Sell 
         if(keccak256(abi.encodePacked(command)) ==
             keccak256(abi.encodePacked("sell"))){
             if (
@@ -57,6 +57,7 @@ contract IntentEngine is UniswapRegistry {
                 swapThroughUniswapV2(getAddressFromString(token),USDT,client,amount);
             }
         }
+        
         return (amount, protocol);
     }
 

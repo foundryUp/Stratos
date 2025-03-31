@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import {UniswapRegistry} from "./UniswapRegistry.sol";
 import {IUniswap} from "./IUniswap.sol";
-import {IERC20} from "./IERC20.sol";
+import {IERC20} from "./utils/IERC20.sol";
 
 
 contract IntentEngine is UniswapRegistry {

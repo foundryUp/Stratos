@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.19;
 
-import {SafeTransferLib} from "../lib/solady/src/utils/SafeTransferLib.sol";
-import {MetadataReaderLib} from "../lib/solady/src/utils/MetadataReaderLib.sol";
+import {SafeTransferLib} from "lib/solady/src/utils/SafeTransferLib.sol";
+import {MetadataReaderLib} from "lib/solady/src/utils/MetadataReaderLib.sol";
 
 /// @title Intents Engine (IE) on Ethereum (IETH)
 /// @notice Simple helper contract for turning transactional intents into executable code.
