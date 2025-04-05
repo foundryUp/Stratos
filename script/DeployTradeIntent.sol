@@ -1,25 +1,25 @@
-// SPDX-License-Identifier : MIT
+// // SPDX-License-Identifier : MIT
 
-pragma solidity ^0.8.17;
+// pragma solidity ^0.8.17;
 
-import {Script} from "forge-std/Script.sol"; //import Script from Foundry Standard Lib
-// import  {IntentEngine} from "../src/IntentEngineTrade.sol"; //import contract to deploy //old one 
-import  {IntentEngine} from "../src/IntentEngineCore.sol"; //import contract to deploy //old one 
+// import {Script} from "forge-std/Script.sol"; //import Script from Foundry Standard Lib
+// // import  {IntentEngine} from "../src/IntentEngineTrade.sol"; //import contract to deploy //old one 
+// import  {IntentEngine} from "../src/IntentEngineCore.sol"; //import contract to deploy //old one 
 
 
-contract DeployTradeIntent is Script {
+// contract DeployTradeIntent is Script {
 
-   function run() external returns(IntentEngine) {
+//    function run() external returns(IntentEngine) {
 
-      vm.startBroadcast();
+//       vm.startBroadcast();
 
-      IntentEngine intentEngineTrade = new IntentEngine(); 
+//       IntentEngine intentEngineTrade = new IntentEngine(); 
     
       
-      vm.stopBroadcast();
+//       vm.stopBroadcast();
 
-      return intentEngineTrade;
+//       return intentEngineTrade;
 
-   }
+//    }
 
-}
+// }

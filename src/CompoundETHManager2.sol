@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+    // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
 interface ICEth {
@@ -10,12 +10,11 @@ interface ICEth {
 }
 
 contract CompoundETHManager {
-    address public immutable cEthAddress;
+    address public immutable cEthAddress=0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
     ICEth private immutable cEth;
 
-    constructor(address _cEthAddress) {
-        cEthAddress = _cEthAddress;
-        cEth = ICEth(_cEthAddress);
+    constructor() {
+        cEth = ICEth(cEthAddress);
     }
 
     function depositETH() external payable {

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, TrendingUp } from 'lucide-react';
-import { PriceChartWidget } from './PriceChartWidget'; // Adjust path if necessary
+import { PriceChartWidget } from './PriceChartWidget'; 
+import { useNavigate } from 'react-router-dom';
+
 import { 
   connectWallet as connectToWallet, 
   fetchTokenBalances,
@@ -64,7 +66,7 @@ function IntentTradingAlgo() {
     try {
       // Uncomment the following block to use the API call
       const response = await fetch(
-        `http://localhost:5050/decisions?risk=${riskLevel}&term=${term}`,
+        `http://localhost:5050/decisions/${riskLevel}/${term}`,
         { method: 'GET', headers: { 'Content-Type': 'application/json' } }
       );
       if (!response.ok) {
@@ -106,6 +108,9 @@ function IntentTradingAlgo() {
       setLoadingSignals(false);
     }
   };
+
+  const navigate = useNavigate();
+
   
 
   // When user clicks Trade, approval happens on-demand.
@@ -169,7 +174,7 @@ function IntentTradingAlgo() {
       {/* Header Section */}
       <div className="bg-gradient-to-b from-[#1A1B3B] to-[#0B1B1E] p-8 border-b border-gray-800">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
+          <h1 onClick={() => navigate('/')} className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
             Stratos
           </h1>
           <button

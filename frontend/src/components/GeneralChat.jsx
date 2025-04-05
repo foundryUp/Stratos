@@ -3,7 +3,7 @@ import { Send, Image as ImageIcon, X, Camera, Loader, Sparkles, Command, Message
 import Spline from '@splinetool/react-spline';
 import { TradeABI } from '../constants/abi';
 
-const IntentAI = () => {
+const GeneralAI = () => {
   const fileInputRef = useRef(null);
   const chatContainerRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -274,4 +274,4 @@ const IntentAI = () => {
   );
 };
 
-export default IntentAI;
+export default GeneralAI;

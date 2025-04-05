@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
 import { MessageSquare, TrendingUp, Menu } from 'lucide-react';
-import GeneralChat from './components/GeneralChat';
+import GeneralAI from './components/GeneralChat';
 import TradingChat from './components/TradingChat';
 import Homepage from './components/Homepage';
 import TokenPortfolio from './components/TokenPortfolio';
@@ -16,10 +16,10 @@ function App() {
         <main className="w-full">
           <Routes>
             <Route path="/" element={<Homepage />} />
-            <Route path="/general" element={<GeneralChat />} />
-            <Route path="/trading" element={<TradingChat />} />
+            <Route path="/general" element={<GeneralAI />} />
+            <Route path="/trading" element={<IntentAI2 />} />
             <Route path="/tokenPortfolio" element={<TokenPortfolio />} />
-            <Route path="/tradingChatRSIAlgos" element={<IntentAI2 />} />
+            <Route path="/getWeth" element={<TradingChat />} />
           </Routes>
         </main>
       </div>

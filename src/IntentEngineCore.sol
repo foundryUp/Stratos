@@ -2,23 +2,83 @@
 pragma solidity ^0.8.17;
 
 import {UniswapRegistry} from "./UniswapRegistry.sol";
-import {IUniswap} from "./IUniswap.sol";
 import {IERC20} from "./IERC20.sol";
+import {IAEth} from "./IAEth.sol";
 
+
+interface IUniswap {
+    // router address V02 : 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
+    function swapExactTokensForTokens(
+        uint amountIn,
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external returns (uint[] memory amounts);
+
+    function getAmountsOut(uint amountIn, address[] memory path) external view returns (uint[] memory amounts)  ;
+
+
+}
+
+interface IAaveETHManager {
+    function depositETH() external payable;
+
+    function withdrawETH(uint256 amount) external;
+}
+
+interface ICompoundETHManager {
+    function deposit(uint256 amount) external payable;
+
+    function withdraw(uint256 amount) external;
+}
+
+interface ICEth {
+    function mint() external payable;
+    function redeem(uint256 redeemTokens) external returns (uint256);
+    function balanceOf(address owner) external view returns (uint256);
+    function exchangeRateCurrent() external returns (uint256);
+    function transfer(address dst, uint256 amount) external returns (bool);
+}
 
 contract IntentEngine is UniswapRegistry {
-    //buy sell 
-    //buy means swap by usdt
-    //sell means swap usdt to something
+
     error InvalidSyntax();
     error InvalidCharacter();
 
     // address constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
-    address constant USDT = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; //Right now for testing its weth warna at time of trading is USDT
+    // ==== Right now for testing its weth warna at time of trading is USDT
+    address constant USDT = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; 
+
+    // AAVE AND COMPOUND 
+    IAaveETHManager public immutable aaveManager;
+    IAEth public immutable aEth;
+    ICEth private immutable cEth;
+    address private immutable compoundaddress;
+    ICompoundETHManager public immutable compoundManager;
+    address constant aEthAddress = 0x4d5F47FA6A74757f35C14fD3a6Ef8E3C9BC514E8;
+    address constant cEthAddress = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
 
     struct StringPart {
         uint256 start;
         uint256 end;
+    }
+
+     constructor(
+        address _aaveManager,
+        address _compoundManager
+    ) {
+        require(_aaveManager != address(0), "Invalid manager address");
+        require(aEthAddress != address(0), "Invalid aETH address");
+        require(
+            _compoundManager != address(0),
+            "Invalid compound manager address"
+        );
+        compoundaddress = _compoundManager;
+        aaveManager = IAaveETHManager(_aaveManager);
+        aEth = IAEth(aEthAddress);
+        compoundManager = ICompoundETHManager(_compoundManager);
+        cEth = ICEth(cEthAddress);
     }
 
     function commandToTrade(
@@ -48,7 +108,7 @@ contract IntentEngine is UniswapRegistry {
             }
         }
 
-        //Buy 
+        //Sell 
         if(keccak256(abi.encodePacked(command)) ==
             keccak256(abi.encodePacked("sell"))){
             if (
@@ -56,6 +116,56 @@ contract IntentEngine is UniswapRegistry {
                 keccak256(abi.encodePacked("uniswap"))
             ) {
                 swapThroughUniswapV2(getAddressFromString(token),USDT,client,amount);
+            }
+        }
+
+        //Compound And AAVE
+
+        //Deposit to AAVE or Compound
+        if(keccak256(abi.encodePacked(command)) ==
+            keccak256(abi.encodePacked("deposit"))){
+            if (
+                keccak256(abi.encodePacked(protocol)) ==
+                keccak256(abi.encodePacked("aave"))
+            ) {
+                _depositAave(amount);
+            }
+            if (
+                keccak256(abi.encodePacked(protocol)) ==
+                keccak256(abi.encodePacked("compound"))
+            ) {
+                _depositCompound(amount);
+            }
+            else{
+                revert InvalidSyntax();
+            }
+        }
+
+        // Withdraw from AAVE or Compound
+        if(keccak256(abi.encodePacked(command)) ==
+            keccak256(abi.encodePacked("withdraw"))){
+            if (
+                keccak256(abi.encodePacked(protocol)) ==
+                keccak256(abi.encodePacked("aave"))
+            ) {
+                _withdrawAave(amount); //@audit
+                (bool ok, ) = payable(msg.sender).call{
+                    value: address(this).balance
+                }("");
+                require(ok, "ETH back to user didnt happen");
+            }
+            if (
+                keccak256(abi.encodePacked(protocol)) ==
+                keccak256(abi.encodePacked("compound"))
+            ) {
+                _withdrawCompound(amount); //@audit
+                (bool ok, ) = payable(msg.sender).call{
+                    value: address(this).balance
+                }("");
+                require(ok, "ETH back to user didnt happen");
+            }
+            else{
+                revert InvalidSyntax();
             }
         }
         return (amount, protocol);
@@ -175,6 +285,33 @@ contract IntentEngine is UniswapRegistry {
         }
     }
 
+    function _depositAave(uint256 amount) internal {
+        require(msg.value == amount, "Ether sent mismatch with amount.");
+        aaveManager.depositETH{value: amount}();
+        uint256 aEthBalance = aEth.balanceOf(address(this));
+        aEth.transfer(msg.sender, aEthBalance);
+    }
+
+    function _withdrawAave(uint256 amount) internal {
+        aaveManager.withdrawETH(amount);
+    }
+
+    function _depositCompound(uint256 amount) internal {
+        require(msg.value == amount, "Ether sent mismatch with amount.");
+        (bool success, ) = address(compoundManager).call{value: amount}(
+            abi.encodeWithSignature("depositETH()")
+        );
+        require(success, "Deposit failed.");
+        cEth.transfer(msg.sender, cEth.balanceOf(address(this)));
+    }
+
+    function _withdrawCompound(uint256 amount) internal {
+        (bool success, ) = address(compoundManager).call(
+            abi.encodeWithSignature("withdrawETH(uint256)", amount)
+        );
+        require(success, "Withdrawal failed.");
+    }
+
     receive() external payable {}
 
     fallback() external payable {}
@@ -204,5 +341,8 @@ contract IntentEngine is UniswapRegistry {
 
         return (addToken1, addToken2, amount, protocol);
     }
+    
 
 }
+
+
