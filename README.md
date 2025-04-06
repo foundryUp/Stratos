@@ -46,3 +46,7 @@ api testing krni hogi like python folder add krdiya h Shorya ne and frontend wit
 1. api testing 
 2. full flow testing on anvil
 3. fix json coming from apis boht saara aar ashort kro bas sell buy hold
+
+
+forge install smartcontractkit/chainlink-local@7d8b2f888e1f10c8841ccd9e0f4af0f5baf11dab --no-commit
+
