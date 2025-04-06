@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import { Send, Image as ImageIcon, Loader } from "lucide-react";
 // import Spline from "@splinetool/react-spline";
 import { useNavigate } from "react-router-dom";
-// Import our web3 helper functions
 import {
   connectWallet,
   fetchTokenBalances,

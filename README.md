@@ -50,3 +50,8 @@ api testing krni hogi like python folder add krdiya h Shorya ne and frontend wit
 
 forge install smartcontractkit/chainlink-local@7d8b2f888e1f10c8841ccd9e0f4af0f5baf11dab --no-commit
 
+
+
+1. aave core 
+2. intent engine defi
+3. intent engine algo 

@@ -20,16 +20,28 @@ interface ICEth {
     function transfer(address dst, uint256 amount) external returns (bool);
 }
 
-contract IntentEngine is UniswapRegistry {
+interface IUniswap {
+    // router address V02 : 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
+    function swapExactTokensForTokens(
+        uint amountIn,
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external returns (uint[] memory amounts);
 
+    function getAmountsOut(uint amountIn, address[] memory path) external view returns (uint[] memory amounts)  ;
+}
+
+contract IntentEngine is UniswapRegistry {
     error InvalidSyntax();
     error InvalidCharacter();
 
     // address constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
     // ==== Right now for testing its weth warna at time of trading is USDT
-    address constant USDT = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; 
+    address constant USDT = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
-    // AAVE AND COMPOUND 
+    // AAVE AND COMPOUND
     IAEth public immutable aEth;
     ICEth private immutable cEth;
     address private immutable compoundaddress;
@@ -37,17 +49,14 @@ contract IntentEngine is UniswapRegistry {
     address constant aEthAddress = 0x4d5F47FA6A74757f35C14fD3a6Ef8E3C9BC514E8;
     address constant cEthAddress = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
 
-    address immutable aave_core; 
+    address immutable aave_core;
 
     struct StringPart {
         uint256 start;
         uint256 end;
     }
 
-    constructor(
-        address _compoundManager,
-        address _aave_core
-    ) {
+    constructor(address _compoundManager, address _aave_core) {
         require(aEthAddress != address(0), "Invalid aETH address");
         require(
             _compoundManager != address(0),
@@ -79,34 +88,45 @@ contract IntentEngine is UniswapRegistry {
         //Compound And AAVE
 
         //Deposit to AAVE or Compound
-        if(keccak256(abi.encodePacked(command)) ==
-            keccak256(abi.encodePacked("deposit"))){
+        if (
+            keccak256(abi.encodePacked(command)) ==
+            keccak256(abi.encodePacked("deposit"))
+        ) {
             if (
                 keccak256(abi.encodePacked(protocol)) ==
                 keccak256(abi.encodePacked("aave"))
             ) {
-               //=== AAVE DEPOSIT CALL 
-               AaveV3Interactor(aave_core).deposit(getAddressFromString(token),amount,client);
+                //=== AAVE DEPOSIT CALL
+                AaveV3Interactor(aave_core).deposit(
+                    getAddressFromString(token),
+                    amount,
+                    client
+                );
             }
             if (
                 keccak256(abi.encodePacked(protocol)) ==
                 keccak256(abi.encodePacked("compound"))
             ) {
                 _depositCompound(amount);
-            }
-            else{
+            } else {
                 revert InvalidSyntax();
             }
         }
 
         // Withdraw from AAVE or Compound
-        if(keccak256(abi.encodePacked(command)) ==
-            keccak256(abi.encodePacked("withdraw"))){
+        if (
+            keccak256(abi.encodePacked(command)) ==
+            keccak256(abi.encodePacked("withdraw"))
+        ) {
             if (
                 keccak256(abi.encodePacked(protocol)) ==
                 keccak256(abi.encodePacked("aave"))
             ) {
-                AaveV3Interactor(aave_core).withdraw(getAddressFromString(token),amount,client);
+                AaveV3Interactor(aave_core).withdraw(
+                    getAddressFromString(token),
+                    amount,
+                    client
+                );
             }
             if (
                 keccak256(abi.encodePacked(protocol)) ==
@@ -117,11 +137,46 @@ contract IntentEngine is UniswapRegistry {
                     value: address(this).balance
                 }("");
                 require(ok, "ETH back to user didnt happen");
-            }
-            else{
+            } else {
                 revert InvalidSyntax();
             }
         }
+
+        if (
+            keccak256(abi.encodePacked(command)) ==
+            keccak256(abi.encodePacked("sendtoaddress"))
+        ) {
+            // `protocol` is your 4th word, it will be address of recipient, e.g. "0xAbC123…"
+            address recipient = hexStringToAddress(protocol);
+
+            // now you can send ETH or ERC‑20 to `recipient`…
+            if (
+                keccak256(abi.encodePacked(token)) ==
+                keccak256(abi.encodePacked("eth"))
+            ) {
+                (bool ok, ) = payable(recipient).call{value: amount}("");
+                require(ok, "ETH transfer failed");
+
+            } else {
+
+                address tokenAddr = getAddressFromString(token);
+                require(tokenAddr != address(0), "Unknown token");
+                require(
+                    IERC20(tokenAddr).transfer(recipient, amount),
+                    "ERC20 transfer failed"
+                );
+            }
+        }
+
+        if (
+            keccak256(abi.encodePacked(command)) ==
+            keccak256(abi.encodePacked("swap"))
+        ) {
+            // Token Swap from "protocol" to token with Amount "amount"
+            swapThroughUniswapV2(getAddressFromString(protocol),getAddressFromString(token),client,amount);
+        }
+
+        
         return (amount, protocol);
     }
 
@@ -216,6 +271,55 @@ contract IntentEngine is UniswapRegistry {
         }
     }
 
+    function swapThroughUniswapV2(address token1, address token2,address client, uint256 amount) private {
+        address[] memory pathArray = new address[](2);
+        pathArray[0] = token1;
+        pathArray[1] = token2;
+        IERC20(pathArray[0]).transferFrom(client, address(this), amount);
+
+        IERC20(token1).approve(
+            0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D,
+            amount
+        );
+
+        // Issue : UniswapV2Router:
+        IUniswap(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D)
+            .swapExactTokensForTokens(
+                amount,
+                0,
+                pathArray,
+                client,
+                block.timestamp + 3000
+        );
+
+    }
+
+    function hexStringToAddress(
+        string memory s
+    ) public pure returns (address addr) {
+        bytes memory b = bytes(s);
+        require(b.length == 42, "Invalid address length");
+        uint160 acc = 0;
+        // skip "0x"
+        for (uint i = 2; i < 42; i++) {
+            acc <<= 4;
+            uint8 c = uint8(b[i]);
+            if (c >= 48 && c <= 57) {
+                // '0'–'9'
+                acc |= uint160(c - 48);
+            } else if (c >= 65 && c <= 70) {
+                // 'A'–'F'
+                acc |= uint160(c - 55);
+            } else if (c >= 97 && c <= 102) {
+                // 'a'–'f'
+                acc |= uint160(c - 87);
+            } else {
+                revert("Invalid hex character");
+            }
+        }
+        return address(acc);
+    }
+
     function _depositCompound(uint256 amount) internal {
         require(msg.value == amount, "Ether sent mismatch with amount.");
         (bool success, ) = address(compoundManager).call{value: amount}(
@@ -235,7 +339,31 @@ contract IntentEngine is UniswapRegistry {
     receive() external payable {}
 
     fallback() external payable {}
-    
 
+    // Getter Functions
+
+    function returnIntentValues(
+        string memory intent
+    )
+        public
+        view
+        returns (
+            string memory command,
+            address token,
+            uint256 amount,
+            string memory protocol
+        )
+    {
+        bytes memory normalized = _lowercase(bytes(intent));
+        StringPart[] memory parts = _split(normalized, " ");
+
+        if (parts.length != 4) revert InvalidSyntax();
+
+        command = string(_getPart(normalized, parts[0]));
+        string memory _token = string(_getPart(normalized, parts[1]));
+        bytes memory amountBytes = _extractAmount(normalized);
+        protocol = string(_getPart(normalized, parts[3]));
+        amount = _toUint(amountBytes, 18, true);
+        token = getAddressFromString(_token);
+    }
 }
-

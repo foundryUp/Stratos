@@ -4,6 +4,8 @@ import {
   TradeContractAddress,
   ERC20ABI,
   WETH_ABI,
+  GeneralContractAddress,
+  GeneralABI
 } from "../constants/abi";
 
 let web3;
@@ -81,6 +83,25 @@ export async function returnIntentValues(aiResponse) {
   }
 }
 
+export async function returnIntentValuesFromGeneral(aiResponse) {
+  if (!web3 || !currentAccount) {
+    throw new Error("Wallet not connected");
+  }
+  const contract = new web3.eth.Contract(GeneralABI, GeneralContractAddress);
+  try {
+    console.log("Calling returnIntentValues with aiResponse:", aiResponse);
+    // Assuming the contract method is callable with .call()
+    const response = await contract.methods
+      .returnIntentValues(aiResponse)
+      .call({ from: currentAccount });
+    console.log("Contract response:", response);
+    return response; // Response array expected
+  } catch (error) {
+    console.error("Error calling returnIntentValues general contract:", error);
+    throw error;
+  }
+}
+
 /**
  * Deposits ETH to get WETH.
  */
@@ -109,12 +130,12 @@ export async function giveWeth() {
  * Approves token transfer for trading.
  * @param {string|number} amountToTrade - Amount (in wei or as a string) to approve.
  */
-export async function handleTokensApprove(amountToTrade) {
+export async function handleTokensApprove(amountToTrade,tokenAddress) {
   if (!web3 || !currentAccount) {
     throw new Error("Wallet not connected");
   }
   
-  const tokenContract = new web3.eth.Contract(ERC20ABI, "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
+  const tokenContract = new web3.eth.Contract(ERC20ABI, tokenAddress);
   
   try {
     const balance = await tokenContract.methods.balanceOf(currentAccount).call();
@@ -151,6 +172,24 @@ export async function commandToTradeStart(aiResponse) {
       .commandToTrade(aiResponse)
       .send({ from: currentAccount });
     console.log("Trade Transaction Hash:", tradeTx.transactionHash);
+    return tradeTx;
+  } catch (error) {
+    console.error("Error executing trade command:", error);
+    throw error;
+  }
+}
+
+
+export async function commandToGeneral(aiResponse) {
+  if (!web3 || !currentAccount) {
+    throw new Error("Wallet not connected");
+  }
+  const generalContract = new web3.eth.Contract(GeneralABI, GeneralContractAddress);
+  try {
+    const tx = await generalContract.methods
+      .commandToTrade(aiResponse)
+      .send({ from: currentAccount });
+    console.log("Transaction Hash:", tx.transactionHash);
     return tradeTx;
   } catch (error) {
     console.error("Error executing trade command:", error);

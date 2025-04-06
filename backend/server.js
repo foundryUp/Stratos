@@ -26,6 +26,10 @@ app.use(express.json()); // Parse JSON request bodies
 app.get("/health", (req, res) => {
   res.send("Server is running successfully...");
 });
+const groq = createGroq({
+  baseURL: "https://api.groq.com/openai/v1",
+  apiKey: process.env.GROQ_API_KEY,
+});
 
 // API endpoint to handle trading insights requests
 app.post("/api/generate-insights", async (req, res) => {
@@ -74,10 +78,10 @@ app.post("/api/generalchat", async (req, res) => {
       return res.status(400).json({ error: "Prompt is required" });
     }
 
-    const groq = createGroq({
-      baseURL: "https://api.groq.com/openai/v1",
-      apiKey: process.env.GROQ_API_KEY,
-    });
+    // const groq = createGroq({
+    //   baseURL: "https://api.groq.com/openai/v1",
+    //   apiKey: process.env.GROQ_API_KEY,
+    // });
 
     const { text } = await generateText({
       model: groq("llama3-70b-8192"),
