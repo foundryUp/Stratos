@@ -3,13 +3,8 @@ pragma solidity ^0.8.17;
 
 import {IERC20} from "src/interfaces/IERC20.sol";
 import {IAEth} from "src/interfaces/IAEth.sol";
-
-
-interface IAaveETHManager {
-    function depositETH() external payable;
-
-    function withdrawETH(uint256 amount) external;
-}
+import {AaveV3Interactor} from "src/aave/aave_core.sol";
+import {UniswapRegistry} from "src/interfaces/UniswapRegistry.sol";
 
 interface ICompoundETHManager {
     function deposit(uint256 amount) external payable;
@@ -25,7 +20,7 @@ interface ICEth {
     function transfer(address dst, uint256 amount) external returns (bool);
 }
 
-contract IntentEngine {
+contract IntentEngine is UniswapRegistry {
 
     error InvalidSyntax();
     error InvalidCharacter();
@@ -35,7 +30,6 @@ contract IntentEngine {
     address constant USDT = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; 
 
     // AAVE AND COMPOUND 
-    IAaveETHManager public immutable aaveManager;
     IAEth public immutable aEth;
     ICEth private immutable cEth;
     address private immutable compoundaddress;
@@ -43,26 +37,27 @@ contract IntentEngine {
     address constant aEthAddress = 0x4d5F47FA6A74757f35C14fD3a6Ef8E3C9BC514E8;
     address constant cEthAddress = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
 
+    address immutable aave_core; 
+
     struct StringPart {
         uint256 start;
         uint256 end;
     }
 
     constructor(
-        address _aaveManager,
-        address _compoundManager
+        address _compoundManager,
+        address _aave_core
     ) {
-        require(_aaveManager != address(0), "Invalid manager address");
         require(aEthAddress != address(0), "Invalid aETH address");
         require(
             _compoundManager != address(0),
             "Invalid compound manager address"
         );
         compoundaddress = _compoundManager;
-        aaveManager = IAaveETHManager(_aaveManager);
         aEth = IAEth(aEthAddress);
         compoundManager = ICompoundETHManager(_compoundManager);
         cEth = ICEth(cEthAddress);
+        aave_core = _aave_core;
     }
 
     function commandToTrade(
@@ -90,7 +85,8 @@ contract IntentEngine {
                 keccak256(abi.encodePacked(protocol)) ==
                 keccak256(abi.encodePacked("aave"))
             ) {
-                _depositAave(amount);
+               //=== AAVE DEPOSIT CALL 
+               AaveV3Interactor(aave_core).deposit(getAddressFromString(token),amount,client);
             }
             if (
                 keccak256(abi.encodePacked(protocol)) ==
@@ -110,11 +106,7 @@ contract IntentEngine {
                 keccak256(abi.encodePacked(protocol)) ==
                 keccak256(abi.encodePacked("aave"))
             ) {
-                _withdrawAave(amount); //@audit
-                (bool ok, ) = payable(msg.sender).call{
-                    value: address(this).balance
-                }("");
-                require(ok, "ETH back to user didnt happen");
+                AaveV3Interactor(aave_core).withdraw(getAddressFromString(token),amount,client);
             }
             if (
                 keccak256(abi.encodePacked(protocol)) ==
@@ -222,17 +214,6 @@ contract IntentEngine {
                     result *= 10 ** (decimals - decimalPlaces);
             }
         }
-    }
-
-    function _depositAave(uint256 amount) internal {
-        require(msg.value == amount, "Ether sent mismatch with amount.");
-        aaveManager.depositETH{value: amount}();
-        uint256 aEthBalance = aEth.balanceOf(address(this));
-        aEth.transfer(msg.sender, aEthBalance);
-    }
-
-    function _withdrawAave(uint256 amount) internal {
-        aaveManager.withdrawETH(amount);
     }
 
     function _depositCompound(uint256 amount) internal {
