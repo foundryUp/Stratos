@@ -52,16 +52,16 @@ contract AaveV3Interactor {
         owner = msg.sender;
     }
     
-    /// @notice Modifier to restrict access to the owner.
-    modifier onlyOwner() {
-         require(msg.sender == owner, "Only owner can call");
-         _;
-    }
+    // /// @notice Modifier to restrict access to the owner.
+    // modifier onlyOwner() {
+    //      require(msg.sender == owner, "Only owner can call");
+    //      _;
+    // }
 
     /// @notice Deposits an ERC20 token into the Aave Pool as collateral.
     /// @param asset The address of the ERC20 token.
     /// @param amount The amount of tokens to deposit.
-    function deposit(address asset, uint256 amount, address user) external onlyOwner {
+    function deposit(address asset, uint256 amount, address user) external {
         // Transfer tokens from the owner to this contract.
         require(IERC20(asset).transferFrom(user, address(this), amount), "Transfer failed");
         // Approve the Aave pool to pull the tokens.
@@ -74,7 +74,7 @@ contract AaveV3Interactor {
     /// @param asset The address of the ERC20 token to borrow.
     /// @param amount The amount of tokens to borrow.
     /// @param interestRateMode The interest rate mode (1 for stable, 2 for variable).
-    function borrow(address asset, uint256 amount, uint256 interestRateMode, address user) external onlyOwner {
+    function borrow(address asset, uint256 amount, uint256 interestRateMode, address user) external  {
         pool.borrow(asset, amount, interestRateMode, 0, address(user));
     }
 
@@ -82,7 +82,7 @@ contract AaveV3Interactor {
     /// @param asset The address of the ERC20 token to repay.
     /// @param amount The amount to repay.
     /// @param rateMode The interest rate mode of the debt (1 for stable, 2 for variable).
-    function repay(address asset, uint256 amount, uint256 rateMode, address user) external onlyOwner {
+    function repay(address asset, uint256 amount, uint256 rateMode, address user) external  {
         // Transfer tokens from the owner to this contract for repayment.
         require(IERC20(asset).transferFrom(user, address(this), amount), "Transfer failed");
         // Approve the Aave pool to pull the tokens for repayment.
@@ -93,8 +93,8 @@ contract AaveV3Interactor {
     /// @notice Withdraws collateral from the Aave Pool.
     /// @param asset The address of the ERC20 token to withdraw.
     /// @param amount The amount of tokens to withdraw.
-    function withdraw(address asset, uint256 amount, address user) external onlyOwner {
+    function withdraw(address asset, uint256 amount, address user) external  {
         uint256 withdrawnAmount = pool.withdraw(asset, amount, address(user));
-        
+
     }
 }

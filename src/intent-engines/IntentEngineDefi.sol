@@ -105,9 +105,10 @@ contract IntentEngine is UniswapRegistry, AAVETokenRegistry {
                 keccak256(abi.encodePacked("compound"))
             ) {
                 _depositCompound(amount);
-            } else {
-                revert InvalidSyntax();
-            }
+            } 
+            // else {
+            //     revert InvalidSyntax();
+            // }
         }
 
         // Withdraw from AAVE or Compound
@@ -130,6 +131,7 @@ contract IntentEngine is UniswapRegistry, AAVETokenRegistry {
                     amount,
                     client
                 );
+                return (amount, protocol);
             }
             if (
                 keccak256(abi.encodePacked(protocol)) ==

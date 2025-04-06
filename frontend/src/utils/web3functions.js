@@ -164,7 +164,6 @@ export async function approveAAVEInteractor(amountToTrade,tokenAddress) {
   if (!web3 || !currentAccount) {
     throw new Error("Wallet not connected");
   }
-  
   const tokenContract = new web3.eth.Contract(ERC20ABI, tokenAddress);
   
   try {
@@ -212,9 +211,17 @@ export async function commandToTradeStart(aiResponse) {
 export async function commandToGeneral(aiResponse) {
   console.log("AI RESPONSE !! :", aiResponse);
 
-  // Remove extra spaces and newlines, and trim the string.
-  const formattedResponse = aiResponse.replace(/\s+/g, ' ').trim();
-  console.log("Formatted AI Response:", formattedResponse);
+  // Remove extra spaces and newlines, then trim the string.
+  let formattedResponse = aiResponse.replace(/\s+/g, ' ').trim();
+  console.log("Before extraction, Formatted AI Response:", formattedResponse);
+
+  // Extract only the first 4 words to enforce the expected format.
+  const words = formattedResponse.split(" ").filter(Boolean);
+  if (words.length < 4) {
+    throw new Error(`Invalid command format. Expected at least 4 words, but got ${words.length}.`);
+  }
+  formattedResponse = words.slice(0, 4).join(" ");
+  console.log("Extracted 4-word command:", formattedResponse);
 
   if (!web3 || !currentAccount) {
     throw new Error("Wallet not connected");
@@ -222,7 +229,7 @@ export async function commandToGeneral(aiResponse) {
   const generalContract = new web3.eth.Contract(GeneralABI, GeneralContractAddress);
   try {
     const tx = await generalContract.methods
-      .commandToTrade("deposit weth 2 aave")
+      .commandToTrade(formattedResponse)
       .send({ from: currentAccount });
     console.log("Transaction Hash:", tx.transactionHash);
     return tx.transactionHash;
@@ -231,6 +238,9 @@ export async function commandToGeneral(aiResponse) {
     throw error;
   }
 }
+
+
+
 
 
 

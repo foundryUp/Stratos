@@ -1,6 +1,7 @@
-export const TradeContractAddress  = "0x88777418972fB3F58489303d763d4DaF398A6527"
-export const GeneralContractAddress = "0x222D74f33b0d07687a769A44399E2272A4cB9FfE"
-export const AAVE_Interactor_Contract = "0xdA796117bF6905DD8DB2fF1ab4397f6d2c4ADda3"
+export const TradeContractAddress  = "0x2C56932223cdE0D363266f1308c48Ff1BF9F9041"
+export const AAVE_Interactor_Contract = "0x2C56932223cdE0D363266f1308c48Ff1BF9F9041"
+export const GeneralContractAddress = "0x91c8C745fd156d8624677aa924Cdc1Ef8173C69C"
+
 export const ERC20ABI = [
   {
     "constant": true,
