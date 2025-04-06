@@ -211,6 +211,7 @@ const GeneralAI = () => {
       approveFn = handleApproveFromTokenToSwap;
       targetArg = protocol;
     }
+    
     // else if (cmd === "sendtoaddress") {
     //   approveFn = handleApproveFromTokenToSwap;
     //   targetArg = protocol;
