@@ -1,25 +1,22 @@
-// // SPDX-License-Identifier : MIT
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.17;
 
-// pragma solidity ^0.8.17;
+import {Script} from "forge-std/Script.sol";
+import {IntentEngine} from "src/intent-engines/IntentEngineAlgo.sol";
+import {AaveV3Interactor} from "src/aave/aave_core.sol";
 
-// import {Script} from "forge-std/Script.sol"; //import Script from Foundry Standard Lib
-// // import  {IntentEngine} from "../src/IntentEngineTrade.sol"; //import contract to deploy //old one 
-// import  {IntentEngine} from "../src/IntentEngineCore.sol"; //import contract to deploy //old one 
+contract DeployIntentEngine is Script {
+    function run() external returns (IntentEngine) {
+        address compoundManager = 0x0000000000000000000000000000000000000001; // placeholder
 
+        vm.startBroadcast();
 
-// contract DeployTradeIntent is Script {
+        // AaveV3Interactor aaveCore = new AaveV3Interactor();
+        IntentEngine engine = new IntentEngine();
 
-//    function run() external returns(IntentEngine) {
+        vm.stopBroadcast();
 
-//       vm.startBroadcast();
-
-//       IntentEngine intentEngineTrade = new IntentEngine(); 
-    
-      
-//       vm.stopBroadcast();
-
-//       return intentEngineTrade;
-
-//    }
-
-// }
+        // return (aaveCore,engine);
+        return engine;
+    }
+}

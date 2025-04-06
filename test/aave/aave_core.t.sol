@@ -29,7 +29,7 @@ contract AaveV3InteractorTest is Test {
         user = address(1);
 
         // Deploy our Aave V3 interactor contract (owner is the deployer).
-        interactor = new AaveV3Interactor(AAVE_POOL);
+        interactor = new AaveV3Interactor();
     
         // Fund the owner with ample USDC and WETH.
         deal(USDC, user, 10000 ether);

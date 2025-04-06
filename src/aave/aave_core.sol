@@ -47,10 +47,8 @@ contract AaveV3Interactor {
     IPool public pool;
     address public owner;
     
-    /// @notice Initializes the contract with the Aave V3 Pool address.
-    /// @param _pool The address of the Aave V3 Pool.
-    constructor(address _pool) {
-        pool = IPool(_pool);
+    constructor() {
+        pool = IPool(0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2);
         owner = msg.sender;
     }
     

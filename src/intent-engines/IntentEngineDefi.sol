@@ -2,7 +2,6 @@
 pragma solidity ^0.8.17;
 
 import {IERC20} from "src/interfaces/IERC20.sol";
-import {IAEth} from "src/interfaces/IAEth.sol";
 import {AaveV3Interactor} from "src/aave/aave_core.sol";
 import {UniswapRegistry} from "src/interfaces/UniswapRegistry.sol";
 import {AAVETokenRegistry} from "src/interfaces/AAVETokenRegistry.sol";
@@ -44,11 +43,9 @@ contract IntentEngine is UniswapRegistry, AAVETokenRegistry {
     address constant USDT = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     // AAVE AND COMPOUND
-    IAEth public immutable aEth;
     ICEth private immutable cEth;
     address private immutable compoundaddress;
     ICompoundETHManager public immutable compoundManager;
-    address constant aEthAddress = 0x4d5F47FA6A74757f35C14fD3a6Ef8E3C9BC514E8;
     address constant cEthAddress = 0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5;
 
     address immutable aave_core;
@@ -59,13 +56,11 @@ contract IntentEngine is UniswapRegistry, AAVETokenRegistry {
     }
 
     constructor(address _compoundManager, address _aave_core) {
-        require(aEthAddress != address(0), "Invalid aETH address");
         require(
             _compoundManager != address(0),
             "Invalid compound manager address"
         );
         compoundaddress = _compoundManager;
-        aEth = IAEth(aEthAddress);
         compoundManager = ICompoundETHManager(_compoundManager);
         cEth = ICEth(cEthAddress);
         aave_core = _aave_core;

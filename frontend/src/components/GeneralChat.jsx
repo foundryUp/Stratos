@@ -1,18 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   Send,
-  Image as ImageIcon,
-  X,
-  Camera,
   Loader,
-  Sparkles,
-  Command,
-  MessageSquare,
-  Zap,
-  Hash,
-  Globe,
-  Bot,
-  LineChart,
 } from "lucide-react";
 import Spline from "@splinetool/react-spline";
 import {
@@ -20,18 +9,15 @@ import {
   fetchTokenBalances,
   returnIntentValuesFromGeneral,
   giveWeth,
-  handleTokensApprove,
   commandToGeneral,
   approveAAVEInteractor,
   handleATokenApproveTrading,
-  handleApproveFromTokenToSwap
+  handleApproveFromTokenToSwap,
 } from "../utils/web3functions";
 
 const GeneralAI = () => {
-  const fileInputRef = useRef(null);
   const chatContainerRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("general");
   const [messages, setMessages] = useState([
     {
       type: "bot",
@@ -39,16 +25,10 @@ const GeneralAI = () => {
     },
   ]);
   const [input, setInput] = useState("");
-  const [inputPrompt, setInputPrompt] = useState("");
-  const [outputPrompt, setOutputPrompt] = useState("");
-  const [contractAddress, setContractAddress] = useState("");
-  const [contractABI, setContractABI] = useState("");
   const [account, setAccount] = useState("");
   const [tokenName, setTokenName] = useState("");
-
-
   const [aiResponse, setAiResponse] = useState("");
-  // New state variables matching the Solidity return types:
+  // Parsed command details
   const [commandValue, setCommandValue] = useState("");
   const [tokenAddress, setTokenAddress] = useState("");
   const [tradeAmount, setTradeAmount] = useState(null);
@@ -56,7 +36,7 @@ const GeneralAI = () => {
   const [isApproved, setIsApproved] = useState(false);
   const [balances, setBalances] = useState({});
 
-  // Auto-scroll the chat container when messages change
+  // Auto-scroll chat container
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop =
@@ -88,32 +68,122 @@ const GeneralAI = () => {
       return;
     }
 
-    // Add current user message to chat
+    // Add user's message to chat
     const updatedMessages = [...messages, { type: "user", content: input }];
     setMessages(updatedMessages);
 
-    // Special "confirm" input triggers trade execution
+    // Check for "confirm" input
     if (input.toLowerCase() === "confirm") {
       console.log("AI Response:", aiResponse);
-      if (tradeAmount && isApproved) {
+      // If not approved yet, perform the approval process
+      if (!isApproved) {
+        let approveFn;
+        let targetArg;
+        const cmd = commandValue.toLowerCase();
+        console.log(
+          `Processing command: ${cmd} for token: ${tokenAddress} with amount: ${tradeAmount}`
+        );
+
+        if (cmd === "deposit") {
+          approveFn = approveAAVEInteractor;
+          targetArg = tokenAddress;
+        } else if (cmd === "withdraw") {
+          if (!tokenName) {
+            console.error("Missing tokenName for withdraw operation");
+            setMessages((prev) => [
+              ...prev,
+              {
+                type: "bot",
+                content: "Missing token name for withdrawal operation.",
+              },
+            ]);
+            setIsLoading(false);
+            return;
+          }
+          approveFn = handleATokenApproveTrading;
+          targetArg = tokenName;
+        } else if (cmd === "swap") {
+          approveFn = handleApproveFromTokenToSwap;
+          targetArg = protocol;
+        } else {
+          console.error(`Unrecognized command: ${cmd}`);
+          setMessages((prev) => [
+            ...prev,
+            {
+              type: "bot",
+              content: "Unrecognized command. Please try again.",
+            },
+          ]);
+          setIsLoading(false);
+          return;
+        }
+
         try {
-          // Command to process the trade; you might extend this to pass new parameters
+          const approved = await approveFn(tradeAmount, targetArg);
+          if (approved) {
+            setIsApproved(true);
+            setMessages((prev) => [
+              ...prev,
+              {
+                type: "bot",
+                content:
+                  "Approval confirmed. Please type 'confirm' again to execute the trade.",
+              },
+            ]);
+            setIsLoading(false);
+            return;
+          } else {
+            console.error("Approval failed");
+            setMessages((prev) => [
+              ...prev,
+              { type: "bot", content: "Approval failed. Please try again." },
+            ]);
+            setIsLoading(false);
+            return;
+          }
+        } catch (error) {
+          console.error("Error during token approval:", error);
+          setMessages((prev) => [
+            ...prev,
+            {
+              type: "bot",
+              content: "Error during token approval. Please try again.",
+            },
+          ]);
+          setIsLoading(false);
+          return;
+        }
+      } else {
+        // If already approved, execute the trade command
+        try {
           await commandToGeneral(aiResponse);
+          setMessages((prev) => [
+            ...prev,
+            {
+              type: "bot",
+              content:
+                "Transaction executed successfully. Please wait for confirmation.",
+            },
+          ]);
         } catch (error) {
           console.error("Trade command failed:", error);
+          setMessages((prev) => [
+            ...prev,
+            {
+              type: "bot",
+              content: "Trade command failed. Please try again.",
+            },
+          ]);
         }
+        setIsLoading(false);
+        return;
       }
-      setMessages((prev) => [
-        ...prev,
-        { type: "bot", content: "Please wait for transaction to be done...." },
-      ]);
-      return;
     }
 
     setInput("");
     setIsLoading(true);
 
-    // Convert chat messages to a serialized prompt
+    // Create a prompt from the conversation history
     const prompt = updatedMessages
       .map(
         (msg) => `${msg.type === "user" ? "User" : "Assistant"}: ${msg.content}`
@@ -145,9 +215,12 @@ const GeneralAI = () => {
         return;
       }
 
-      // Save AI response and add it to the chat
+      // Save and display the AI response
       setAiResponse(data.response);
-      setMessages((prev) => [...prev, { type: "bot", content: data.response }]);
+      setMessages((prev) => [
+        ...prev,
+        { type: "bot", content: data.response },
+      ]);
     } catch (error) {
       console.error("Error fetching response:", error);
       setMessages((prev) => [
@@ -168,17 +241,6 @@ const GeneralAI = () => {
     setMessages((prev) => [...prev, { type: "bot", ...message }]);
   };
 
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-    setMessages([
-      {
-        type: "bot",
-        content:
-          "👋 Hi there! I'm your AI assistant. How can I help you today?",
-      },
-    ]);
-  };
-
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -186,59 +248,22 @@ const GeneralAI = () => {
     }
   };
 
-  useEffect(() => {
-    if (!tradeAmount || !tokenAddress || !commandValue) {
-      console.error("Error in !tradeAmount || !tokenAddress || !commandValue !! :", error);
-    }
-
-    const cmd = commandValue.toLowerCase();
-
-    let approveFn;
-    let targetArg;
-
-    if (cmd === "deposit") {
-      approveFn = approveAAVEInteractor;
-      targetArg = tokenAddress;
-    } 
-    else if (cmd === "withdraw") {
-      if(tokenName==""){
-        console.error("Error in fetching simple name from ai response! :", error);
-      }
-      approveFn = handleATokenApproveTrading;
-      targetArg = tokenName;
-    }
-    else if (cmd === "swap") {
-      approveFn = handleApproveFromTokenToSwap;
-      targetArg = protocol;
-    }
-    
-    // else if (cmd === "sendtoaddress") {
-    //   approveFn = handleApproveFromTokenToSwap;
-    //   targetArg = protocol;
-    // }
-
-    approveFn(tradeAmount, targetArg)
-      .then((approved) => {
-        if (approved) setIsApproved(true);
-      })
-      .catch((error) => {
-        console.error("Error approving tokens:", error);
-      });
-  }, [tradeAmount]);
-
-  // Parse the AI response using returnIntentValues to extract command details
+  // Parse the AI response to extract command details
   useEffect(() => {
     if (aiResponse) {
       console.log("aiResponse updated, calling returnIntentValues");
-      const words = aiResponse.trim().toLowerCase().split(" ");
-      setTokenName(words[1]);
-      returnIntentValuesFromGeneral(aiResponse)
+      // Use only the first line of the AI response for parsing
+      const sanitizedResponse = aiResponse.split("\n")[0].trim();
+      const words = sanitizedResponse.toLowerCase().split(" ");
+      setTokenName(words[1] || "");
+      returnIntentValuesFromGeneral(sanitizedResponse)
         .then((response) => {
+          console.log("Parsed response:", response);
           // Expecting: [command, token, amount, protocol]
-          setCommandValue(response[0]);
-          setTokenAddress(response[1]);
-          setTradeAmount(response[2]);
-          setProtocol(response[3]);
+          setCommandValue(response[0] || "");
+          setTokenAddress(response[1] || "");
+          setTradeAmount(response[2] || null);
+          setProtocol(response[3] || "");
         })
         .catch((error) => {
           console.error("Error in returnIntentValues:", error);
@@ -299,7 +324,6 @@ const GeneralAI = () => {
         <div className="w-full max-w-md">
           <div className="relative group">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-3xl blur opacity-30 group-hover:opacity-50 transition duration-1000"></div>
-
             <div className="relative bg-black/40 backdrop-blur-2xl rounded-3xl border border-white/10">
               {/* Chat header and wallet controls */}
               <div className="p-4 border-b border-white/10">
@@ -322,7 +346,6 @@ const GeneralAI = () => {
                     </div>
                   </div>
                 </div>
-
                 {!account && (
                   <div className="flex w-full space-x-4">
                     <button

@@ -209,23 +209,29 @@ export async function commandToTradeStart(aiResponse) {
   }
 }
 
-
 export async function commandToGeneral(aiResponse) {
+  console.log("AI RESPONSE !! :", aiResponse);
+
+  // Remove extra spaces and newlines, and trim the string.
+  const formattedResponse = aiResponse.replace(/\s+/g, ' ').trim();
+  console.log("Formatted AI Response:", formattedResponse);
+
   if (!web3 || !currentAccount) {
     throw new Error("Wallet not connected");
   }
   const generalContract = new web3.eth.Contract(GeneralABI, GeneralContractAddress);
   try {
     const tx = await generalContract.methods
-      .commandToTrade(aiResponse)
+      .commandToTrade("deposit weth 2 aave")
       .send({ from: currentAccount });
     console.log("Transaction Hash:", tx.transactionHash);
-    return tradeTx;
+    return tx.transactionHash;
   } catch (error) {
     console.error("Error executing trade command:", error);
     throw error;
   }
 }
+
 
 
 
@@ -325,32 +331,32 @@ export async function handleApproveFromTokenToSwap(amountToTrade, tokenName) {
   return true;
 }
 
-export async function handleApproveFromTokenToSwap(amountToTrade, tokenName) {
-  if (!web3 || !currentAccount) {
-    throw new Error("Wallet not connected");
-  }
+// export async function handleApproveFromTokenToSwap(amountToTrade, tokenName) {
+//   if (!web3 || !currentAccount) {
+//     throw new Error("Wallet not connected");
+//   }
 
-  // 1) fetch the aToken address from your on‑chain registry
-  const general = new web3.eth.Contract(
-    GeneralABI,
-    GeneralContractAddress
-  );
-  const tokenaddress = await general.methods
-    .getAddressFromString(tokenName)
-    .call();
+//   // 1) fetch the aToken address from your on‑chain registry
+//   const general = new web3.eth.Contract(
+//     GeneralABI,
+//     GeneralContractAddress
+//   );
+//   const tokenaddress = await general.methods
+//     .getAddressFromString(tokenName)
+//     .call();
 
-  // 2) instantiate the aToken contract
-  const TokenContract = new web3.eth.Contract(ERC20ABI, tokenaddress);
+//   // 2) instantiate the aToken contract
+//   const TokenContract = new web3.eth.Contract(ERC20ABI, tokenaddress);
 
-  // 3) convert to wei (assumes 18 decimals)
-  const amountInWei = web3.utils.toWei(amountToTrade.toString(), "ether");
-  console.log("Approving aToken for general contract:", amountInWei);
+//   // 3) convert to wei (assumes 18 decimals)
+//   const amountInWei = web3.utils.toWei(amountToTrade.toString(), "ether");
+//   console.log("Approving aToken for general contract:", amountInWei);
 
-  // 4) send the approval tx
-  const tx = await TokenContract.methods
-    .approve(GeneralContractAddress, amountInWei)
-    .send({ from: currentAccount });
+//   // 4) send the approval tx
+//   const tx = await TokenContract.methods
+//     .approve(GeneralContractAddress, amountInWei)
+//     .send({ from: currentAccount });
 
-  console.log("Token  approval tx hash for swap:", tx.transactionHash);
-  return true;
-}
+//   console.log("Token  approval tx hash for swap:", tx.transactionHash);
+//   return true;
+// }
