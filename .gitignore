@@ -8,5 +8,11 @@ __pycache__
 myenv
 venv
 
-
 node_modules
+
+cache
+
+# Ignore everything in lib/
+lib/*
+# But keep submodules (if you're using `forge install`)
+!lib/**/.git
