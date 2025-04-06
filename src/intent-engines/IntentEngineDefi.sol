@@ -5,6 +5,8 @@ import {IERC20} from "src/interfaces/IERC20.sol";
 import {IAEth} from "src/interfaces/IAEth.sol";
 import {AaveV3Interactor} from "src/aave/aave_core.sol";
 import {UniswapRegistry} from "src/interfaces/UniswapRegistry.sol";
+import {AAVETokenRegistry} from "src/interfaces/AAVETokenRegistry.sol";
+
 
 interface ICompoundETHManager {
     function deposit(uint256 amount) external payable;
@@ -33,7 +35,7 @@ interface IUniswap {
     function getAmountsOut(uint amountIn, address[] memory path) external view returns (uint[] memory amounts)  ;
 }
 
-contract IntentEngine is UniswapRegistry {
+contract IntentEngine is UniswapRegistry, AAVETokenRegistry {
     error InvalidSyntax();
     error InvalidCharacter();
 
@@ -78,10 +80,10 @@ contract IntentEngine is UniswapRegistry {
 
         if (parts.length != 4) revert InvalidSyntax();
 
-        string memory command = string(_getPart(normalized, parts[0])); //buy / sell
-        string memory token = string(_getPart(normalized, parts[1])); //token
+        string memory command = string(_getPart(normalized, parts[0])); 
+        string memory token = string(_getPart(normalized, parts[1])); //token  //Swap to
         bytes memory amountBytes = _extractAmount(normalized); //amount
-        protocol = string(_getPart(normalized, parts[3])); //uniswap
+        protocol = string(_getPart(normalized, parts[3])); //Protocol //Swap from
 
         amount = _toUint(amountBytes, 18, true);
 
@@ -118,10 +120,16 @@ contract IntentEngine is UniswapRegistry {
             keccak256(abi.encodePacked(command)) ==
             keccak256(abi.encodePacked("withdraw"))
         ) {
+            //!!! ==== Ask user to transfer aToken to interactor ==== !!! 
+            // !!! If User wants to Withdraw USDC so he needs to transfer aUSDC to interactor
+            // approve from user to spend his atoken by this contract
+            // tx starts -> from user this contracts sends a token to interactor, then withdraw function called, withdraw done then tx stops
+            
             if (
                 keccak256(abi.encodePacked(protocol)) ==
                 keccak256(abi.encodePacked("aave"))
             ) {
+                IERC20(getAAVEAddressFromString(token)).transferFrom(client,aave_core,amount);
                 AaveV3Interactor(aave_core).withdraw(
                     getAddressFromString(token),
                     amount,

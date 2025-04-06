@@ -22,6 +22,9 @@ import {
   giveWeth,
   handleTokensApprove,
   commandToGeneral,
+  approveAAVEInteractor,
+  handleATokenApproveTrading,
+  handleApproveFromTokenToSwap
 } from "../utils/web3functions";
 
 const GeneralAI = () => {
@@ -41,6 +44,8 @@ const GeneralAI = () => {
   const [contractAddress, setContractAddress] = useState("");
   const [contractABI, setContractABI] = useState("");
   const [account, setAccount] = useState("");
+  const [tokenName, setTokenName] = useState("");
+
 
   const [aiResponse, setAiResponse] = useState("");
   // New state variables matching the Solidity return types:
@@ -54,7 +59,8 @@ const GeneralAI = () => {
   // Auto-scroll the chat container when messages change
   useEffect(() => {
     if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
     }
   }, [messages]);
 
@@ -110,8 +116,7 @@ const GeneralAI = () => {
     // Convert chat messages to a serialized prompt
     const prompt = updatedMessages
       .map(
-        (msg) =>
-          `${msg.type === "user" ? "User" : "Assistant"}: ${msg.content}`
+        (msg) => `${msg.type === "user" ? "User" : "Assistant"}: ${msg.content}`
       )
       .join("\n");
 
@@ -154,7 +159,6 @@ const GeneralAI = () => {
     setIsLoading(false);
   };
 
-  // Optional: Simulated typing to mimic AI "thinking"
   const simulateTyping = async (message) => {
     setIsLoading(true);
     await new Promise((resolve) =>
@@ -182,23 +186,51 @@ const GeneralAI = () => {
     }
   };
 
-  // Approve tokens once a valid trade amount is parsed
   useEffect(() => {
-    if (tradeAmount) {
-      handleTokensApprove(tradeAmount,tokenAddress)
-        .then((approved) => {
-          if (approved) setIsApproved(true);
-        })
-        .catch((error) => {
-          console.error("Error approving tokens:", error);
-        });
+    if (!tradeAmount || !tokenAddress || !commandValue) {
+      console.error("Error in !tradeAmount || !tokenAddress || !commandValue !! :", error);
     }
+
+    const cmd = commandValue.toLowerCase();
+
+    let approveFn;
+    let targetArg;
+
+    if (cmd === "deposit") {
+      approveFn = approveAAVEInteractor;
+      targetArg = tokenAddress;
+    } 
+    else if (cmd === "withdraw") {
+      if(tokenName==""){
+        console.error("Error in fetching simple name from ai response! :", error);
+      }
+      approveFn = handleATokenApproveTrading;
+      targetArg = tokenName;
+    }
+    else if (cmd === "swap") {
+      approveFn = handleApproveFromTokenToSwap;
+      targetArg = protocol;
+    }
+    // else if (cmd === "sendtoaddress") {
+    //   approveFn = handleApproveFromTokenToSwap;
+    //   targetArg = protocol;
+    // }
+
+    approveFn(tradeAmount, targetArg)
+      .then((approved) => {
+        if (approved) setIsApproved(true);
+      })
+      .catch((error) => {
+        console.error("Error approving tokens:", error);
+      });
   }, [tradeAmount]);
 
   // Parse the AI response using returnIntentValues to extract command details
   useEffect(() => {
     if (aiResponse) {
       console.log("aiResponse updated, calling returnIntentValues");
+      const words = aiResponse.trim().toLowerCase().split(" ");
+      setTokenName(words[1]);
       returnIntentValuesFromGeneral(aiResponse)
         .then((response) => {
           // Expecting: [command, token, amount, protocol]
@@ -211,7 +243,6 @@ const GeneralAI = () => {
           console.error("Error in returnIntentValues:", error);
         });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aiResponse]);
 
   return (
@@ -280,7 +311,9 @@ const GeneralAI = () => {
                       </div>
                     </div>
                     <div>
-                      <h2 className="font-bold text-white text-lg">AI Assistant</h2>
+                      <h2 className="font-bold text-white text-lg">
+                        AI Assistant
+                      </h2>
                       <div className="flex items-center space-x-2">
                         <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
                         <p className="text-white/60 text-sm">Online & Ready</p>

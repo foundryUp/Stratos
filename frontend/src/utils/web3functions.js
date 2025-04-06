@@ -5,7 +5,8 @@ import {
   ERC20ABI,
   WETH_ABI,
   GeneralContractAddress,
-  GeneralABI
+  GeneralABI,
+  AAVE_Interactor_Contract
 } from "../constants/abi";
 
 let web3;
@@ -159,6 +160,35 @@ export async function handleTokensApprove(amountToTrade,tokenAddress) {
   }
 }
 
+export async function approveAAVEInteractor(amountToTrade,tokenAddress) {
+  if (!web3 || !currentAccount) {
+    throw new Error("Wallet not connected");
+  }
+  
+  const tokenContract = new web3.eth.Contract(ERC20ABI, tokenAddress);
+  
+  try {
+    const balance = await tokenContract.methods.balanceOf(currentAccount).call();
+    console.log("Token balance:", balance);
+    
+    // Make sure amountToTrade is a number, not already in wei
+    const amountInWei = web3.utils.toWei(amountToTrade.toString(), "ether");
+    console.log("Amount to trade in wei:", amountInWei);
+    console.log("Approving tokens...");
+    
+    // Use the correct amount for approval
+    const approveTx = await tokenContract.methods
+      .approve(AAVE_Interactor_Contract, amountInWei)
+      .send({ from: currentAccount });
+      
+    console.log("Tokens approved. Tx:", approveTx);
+    return true;
+  } catch (error) {
+    console.error("Error approving tokens:", error);
+    throw error;
+  }
+}
+
 /**
  * Sends command to the trade contract.
  */
@@ -226,4 +256,101 @@ export async function handleTokensApproveTrading(amountToTrade,tokenAddress) {
     console.error("Error approving tokens:", error);
     throw error;
   }
+}
+
+export async function handleATokenApproveTrading(amountToTrade, tokenName) {
+  if (!web3 || !currentAccount) {
+    throw new Error("Wallet not connected");
+  }
+
+  // 1) fetch the aToken address from your on‑chain registry
+  const general = new web3.eth.Contract(
+    GeneralABI,
+    GeneralContractAddress
+  );
+  const aTokenAddress = await general.methods
+    .getAAVEAddressFromString(tokenName)
+    .call();
+
+  if (
+    !aTokenAddress ||
+    aTokenAddress === "0x0000000000000000000000000000000000000000"
+  ) {
+    throw new Error(`No aToken found for ${tokenName}`);
+  }
+
+  // 2) instantiate the aToken contract
+  const aTokenContract = new web3.eth.Contract(ERC20ABI, aTokenAddress);
+
+  // 3) convert to wei (assumes 18 decimals)
+  const amountInWei = web3.utils.toWei(amountToTrade.toString(), "ether");
+  console.log("Approving aToken for general contract:", amountInWei);
+
+  // 4) send the approval tx
+  const tx = await aTokenContract.methods
+    .approve(GeneralContractAddress, amountInWei)
+    .send({ from: currentAccount });
+
+  console.log("aToken approval tx hash:", tx.transactionHash);
+  return true;
+}
+
+export async function handleApproveFromTokenToSwap(amountToTrade, tokenName) {
+  if (!web3 || !currentAccount) {
+    throw new Error("Wallet not connected");
+  }
+
+  // 1) fetch the aToken address from your on‑chain registry
+  const general = new web3.eth.Contract(
+    GeneralABI,
+    GeneralContractAddress
+  );
+  const tokenaddress = await general.methods
+    .getAddressFromString(tokenName)
+    .call();
+
+  // 2) instantiate the aToken contract
+  const TokenContract = new web3.eth.Contract(ERC20ABI, tokenaddress);
+
+  // 3) convert to wei (assumes 18 decimals)
+  const amountInWei = web3.utils.toWei(amountToTrade.toString(), "ether");
+  console.log("Approving aToken for general contract:", amountInWei);
+
+  // 4) send the approval tx
+  const tx = await TokenContract.methods
+    .approve(GeneralContractAddress, amountInWei)
+    .send({ from: currentAccount });
+
+  console.log("Token  approval tx hash for swap:", tx.transactionHash);
+  return true;
+}
+
+export async function handleApproveFromTokenToSwap(amountToTrade, tokenName) {
+  if (!web3 || !currentAccount) {
+    throw new Error("Wallet not connected");
+  }
+
+  // 1) fetch the aToken address from your on‑chain registry
+  const general = new web3.eth.Contract(
+    GeneralABI,
+    GeneralContractAddress
+  );
+  const tokenaddress = await general.methods
+    .getAddressFromString(tokenName)
+    .call();
+
+  // 2) instantiate the aToken contract
+  const TokenContract = new web3.eth.Contract(ERC20ABI, tokenaddress);
+
+  // 3) convert to wei (assumes 18 decimals)
+  const amountInWei = web3.utils.toWei(amountToTrade.toString(), "ether");
+  console.log("Approving aToken for general contract:", amountInWei);
+
+  // 4) send the approval tx
+  const tx = await TokenContract.methods
+    .approve(GeneralContractAddress, amountInWei)
+    .send({ from: currentAccount });
+
+  console.log("Token  approval tx hash for swap:", tx.transactionHash);
+  return true;
 }

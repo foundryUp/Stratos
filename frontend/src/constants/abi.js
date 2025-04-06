@@ -2,6 +2,7 @@ export const OldTradeABI = [{"type":"fallback","stateMutability":"payable"},{"ty
 export const TradeContractAddress  = "0x97915c43511f8cB4Fbe7Ea03B96EEe940eC4AF12"
 export const GeneralContractAddress = ""
 export const GeneralABI = [] 
+export const AAVE_Interactor_Contract = ""
 export const ERC20ABI = [
   {
     "constant": true,
