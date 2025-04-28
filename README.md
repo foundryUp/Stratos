@@ -14,10 +14,7 @@ An on-chain “intent engine” for EVM chains, powered by a local Anvil node. T
   - [Prerequisites](#prerequisites)  
   - [Clone & Install](#clone--install)  
   - [Start Local Chain (Anvil)](#start-local-chain-anvil)  
-  - [Compile & Deploy](#compile--deploy)  
-- [Usage](#usage)  
-  - [Chat Interface](#chat-interface)  
-  - [Direct Contract Calls](#direct-contract-calls)  
+  - [Compile & Deploy](#compile--deploy)   
 - [Development & Testing](#development--testing)  
 - [License](#license)  
 
@@ -149,48 +146,6 @@ This spins up a local EVM node at `http://127.0.0.1:8545` with unlocked accounts
 
 ---
 
-## Usage
-
-### Chat Interface
-
-1. Start the off-chain hub:
-   ```bash
-yarn start
-```
-2. Open `http://localhost:3000` (or CLI)  
-3. Enter commands like:
-   ```
-   Send 1 ETH to 0xAbC…1234
-   Deposit 50 DAI on Compound
-   Run long-term high-risk on my ETH balance
-   ```
-
----
-
-### Direct Contract Calls
-
-You can also invoke intents directly via a script or REPL:
-
-```js
-import { ethers } from "ethers";
-import { IntentHub } from "./hub";
-
-async function main() {
-  const provider = new ethers.providers.JsonRpcProvider("http://127.0.0.1:8545");
-  const signer = provider.getSigner(0);
-  const hub = new IntentHub(provider, signer, {
-    general: "0x…",
-    defi:    "0x…",
-    trading: "0x…"
-  });
-
-  // Send 0.1 ETH
-  await hub.general.send("0xAbC…1234", ethers.utils.parseEther("0.1"));
-}
-main();
-```
-
----
 
 ## Development & Testing
 
