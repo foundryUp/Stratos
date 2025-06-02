@@ -1,0 +1,79 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "intent",
+        "type": "string"
+      }
+    ],
+    "name": "command",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "to",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "amount",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "token",
+        "type": "string"
+      }
+    ],
+    "name": "send",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "amountIn",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "amountOutMin",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "tokenIn",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "tokenOut",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "receiver",
+        "type": "string"
+      }
+    ],
+    "name": "swap",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "stateMutability": "payable",
+    "type": "receive"
+  },
+  {
+    "stateMutability": "payable",
+    "type": "fallback"
+  }
+] 

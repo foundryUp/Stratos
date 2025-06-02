@@ -7,12 +7,7 @@ import Spline from "@splinetool/react-spline";
 import {
   connectWallet,
   fetchTokenBalances,
-  returnIntentValuesFromGeneral,
-  giveWeth,
-  commandToGeneral,
-  approveAAVEInteractor,
-  handleATokenApproveTrading,
-  handleApproveFromTokenToSwap,
+  commandToSimpleIE,
 } from "../utils/web3functions";
 
 const GeneralAI = () => {
@@ -21,26 +16,18 @@ const GeneralAI = () => {
   const [messages, setMessages] = useState([
     {
       type: "bot",
-      content: "👋 Hi there! I'm your AI assistant. How can I help you today?",
+      content: "👋 Hi there! I'm your AI assistant. I can help you send tokens or swap tokens. How can I help you today?",
     },
   ]);
   const [input, setInput] = useState("");
   const [account, setAccount] = useState("");
-  const [tokenName, setTokenName] = useState("");
   const [aiResponse, setAiResponse] = useState("");
-  // Parsed command details
-  const [commandValue, setCommandValue] = useState("");
-  const [tokenAddress, setTokenAddress] = useState("");
-  const [tradeAmount, setTradeAmount] = useState(null);
-  const [protocol, setProtocol] = useState("");
-  const [isApproved, setIsApproved] = useState(false);
   const [balances, setBalances] = useState({});
 
   // Auto-scroll chat container
   useEffect(() => {
     if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop =
-        chatContainerRef.current.scrollHeight;
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages]);
 
@@ -48,197 +35,111 @@ const GeneralAI = () => {
     try {
       const { account } = await connectWallet();
       setAccount(account);
+      const balancesObj = await fetchTokenBalances(account);
+      setBalances(balancesObj);
     } catch (error) {
       console.error("Wallet connection failed:", error);
     }
   };
 
   const handleSend = async () => {
-    console.log("handleSend triggered with input:", input);
+    if (!input.trim()) return;
 
-    let balancesObj = {};
-    try {
-      balancesObj = await fetchTokenBalances(account);
-    } catch (error) {
-      console.error("Error fetching balances:", error);
-    }
-
-    if (!input.trim()) {
-      console.warn("Input is empty");
+    // Check if wallet is connected
+    if (!account) {
+      setMessages((prev) => [
+        ...prev,
+        { type: "bot", content: "Please connect your wallet first." },
+      ]);
       return;
     }
 
-    // Add user's message to chat
-    const updatedMessages = [...messages, { type: "user", content: input }];
-    setMessages(updatedMessages);
-
-    // Check for "confirm" input
-    if (input.toLowerCase() === "confirm") {
-      console.log("AI Response:", aiResponse);
-      // If not approved yet, perform the approval process
-      if (!isApproved) {
-        let approveFn;
-        let targetArg;
-        const cmd = commandValue.toLowerCase();
-        console.log(
-          `Processing command: ${cmd} for token: ${tokenAddress} with amount: ${tradeAmount}`
-        );
-
-        if (cmd === "deposit") {
-          approveFn = approveAAVEInteractor;
-          targetArg = tokenAddress;
-        } else if (cmd === "withdraw") {
-          if (!tokenName) {
-            console.error("Missing tokenName for withdraw operation");
-            setMessages((prev) => [
-              ...prev,
-              {
-                type: "bot",
-                content: "Missing token name for withdrawal operation.",
-              },
-            ]);
-            setIsLoading(false);
-            return;
-          }
-          approveFn = handleATokenApproveTrading;
-          targetArg = tokenName;
-        } else if (cmd === "swap") {
-          approveFn = handleApproveFromTokenToSwap;
-          targetArg = protocol;
-        } else {
-          console.error(`Unrecognized command: ${cmd}`);
-          setMessages((prev) => [
-            ...prev,
-            {
-              type: "bot",
-              content: "Unrecognized command. Please try again.",
-            },
-          ]);
-          setIsLoading(false);
-          return;
-        }
-
-        try {
-          const approved = await approveFn(tradeAmount, targetArg);
-          if (approved) {
-            setIsApproved(true);
-            setMessages((prev) => [
-              ...prev,
-              {
-                type: "bot",
-                content:
-                  "Approval confirmed. Please type 'confirm' again to execute the trade.",
-              },
-            ]);
-            setIsLoading(false);
-            return;
-          } else {
-            console.error("Approval failed");
-            setMessages((prev) => [
-              ...prev,
-              { type: "bot", content: "Approval failed. Please try again." },
-            ]);
-            setIsLoading(false);
-            return;
-          }
-        } catch (error) {
-          console.error("Error during token approval:", error);
-          setMessages((prev) => [
-            ...prev,
-            {
-              type: "bot",
-              content: "Error during token approval. Please try again.",
-            },
-          ]);
-          setIsLoading(false);
-          return;
-        }
-      } else {
-        // If already approved, execute the trade command
-        try {
-          await commandToGeneral(aiResponse);
-          setMessages((prev) => [
-            ...prev,
-            {
-              type: "bot",
-              content:
-                "Transaction executed successfully. Please wait for confirmation.",
-            },
-          ]);
-        } catch (error) {
-          console.error("Trade command failed:", error);
-          setMessages((prev) => [
-            ...prev,
-            {
-              type: "bot",
-              content: "Trade command failed. Please try again.",
-            },
-          ]);
-        }
-        setIsLoading(false);
-        return;
-      }
-    }
-
+    // Add user message to chat
+    const userMessage = { type: "user", content: input };
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
 
-    // Create a prompt from the conversation history
-    const prompt = updatedMessages
-      .map(
-        (msg) => `${msg.type === "user" ? "User" : "Assistant"}: ${msg.content}`
-      )
-      .join("\n");
-
     try {
-      const response = await fetch("http://localhost:5000/api/generalchat", {
+      // Get all messages for context
+      const updatedMessages = [...messages, userMessage];
+      const prompt = updatedMessages
+        .map((msg) => `${msg.type === "user" ? "User" : "Assistant"}: ${msg.content}`)
+        .join("\n");
+
+      // Call backend API
+      const response = await fetch("http://localhost:5001/api/generalchat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt, // sending the entire chat history
-          balances: balancesObj,
+          prompt,
+          balances,
         }),
       });
+
+      if (!response.ok) {
+        throw new Error("Server error");
+      }
 
       const data = await response.json();
       console.log("Response from backend:", data);
 
-      if (!response.ok || !data.response) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            type: "bot",
-            content: "Servers are busy. Please try again in 30 seconds.",
-          },
-        ]);
-        setIsLoading(false);
-        return;
+      if (!data.response) {
+        throw new Error("Invalid response from server");
       }
 
-      // Save and display the AI response
-      setAiResponse(data.response);
+      // Parse the command from the response
+      let commandObj;
+      try {
+        commandObj = JSON.parse(data.response);
+        console.log("Parsed command object:", commandObj);
+      } catch (error) {
+        console.error("Error parsing command:", error);
+        throw new Error("Invalid command format from server");
+      }
+      
+      if (!commandObj || !commandObj.command) {
+        throw new Error("Invalid command format from server");
+      }
+
+      // Add AI response to chat
       setMessages((prev) => [
         ...prev,
-        { type: "bot", content: data.response },
+        { type: "bot", content: `I'll help you with that. Executing command: ${commandObj.command}` },
       ]);
+
+      // Execute the command
+      console.log("Executing command:", commandObj.command);
+      const tx = await commandToSimpleIE(commandObj.command);
+      console.log("Transaction result:", tx);
+      
+      // Add success message
+      setMessages((prev) => [
+        ...prev,
+        { type: "bot", content: "Transaction executed successfully! 🎉" },
+      ]);
+
     } catch (error) {
-      console.error("Error fetching response:", error);
+      console.error("Error:", error);
+      let errorMessage = "Something went wrong. Please try again.";
+      
+      if (error.message.includes("User denied")) {
+        errorMessage = "Transaction was rejected in your wallet.";
+      } else if (error.message.includes("Invalid command format")) {
+        errorMessage = "Invalid command format received from server.";
+      } else if (error.message.includes("Server error")) {
+        errorMessage = "Server is busy. Please try again in a few moments.";
+      } else if (error.message.includes("insufficient funds")) {
+        errorMessage = "You don't have enough funds to complete this transaction.";
+      }
+
       setMessages((prev) => [
         ...prev,
-        { type: "bot", content: "Something went wrong. Try again." },
+        { type: "bot", content: errorMessage },
       ]);
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
-  };
-
-  const simulateTyping = async (message) => {
-    setIsLoading(true);
-    await new Promise((resolve) =>
-      setTimeout(resolve, 500 + Math.random() * 500)
-    );
-    setIsLoading(false);
-    setMessages((prev) => [...prev, { type: "bot", ...message }]);
   };
 
   const handleKeyPress = (e) => {
@@ -247,29 +148,6 @@ const GeneralAI = () => {
       handleSend();
     }
   };
-
-  // Parse the AI response to extract command details
-  useEffect(() => {
-    if (aiResponse) {
-      console.log("aiResponse updated, calling returnIntentValues");
-      // Use only the first line of the AI response for parsing
-      const sanitizedResponse = aiResponse.split("\n")[0].trim();
-      const words = sanitizedResponse.toLowerCase().split(" ");
-      setTokenName(words[1] || "");
-      returnIntentValuesFromGeneral(sanitizedResponse)
-        .then((response) => {
-          console.log("Parsed response:", response);
-          // Expecting: [command, token, amount, protocol]
-          setCommandValue(response[0] || "");
-          setTokenAddress(response[1] || "");
-          setTradeAmount(response[2] || null);
-          setProtocol(response[3] || "");
-        })
-        .catch((error) => {
-          console.error("Error in returnIntentValues:", error);
-        });
-    }
-  }, [aiResponse]);
 
   return (
     <div className="flex min-h-screen bg-[#0a0014] relative overflow-hidden">
@@ -356,13 +234,6 @@ const GeneralAI = () => {
                     </button>
                   </div>
                 )}
-                <br />
-                <button
-                  onClick={giveWeth}
-                  className="flex w-full space-x-4 p-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl text-white font-medium hover:opacity-90 transition-opacity"
-                >
-                  Get WETH for testing
-                </button>
               </div>
 
               {/* Chat messages */}
