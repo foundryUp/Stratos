@@ -1,6 +1,6 @@
-
 #############################LONG TERM HIGH RISK TRADING STRATEGY#############################
 #############################MOVING AVERAGE CONVERGENCE DIVERGENCE#############################
+
 def extract_USDC_prices(graph_data):
     """
     Extracts a chronological list of WETH prices in USD from the subgraph swap data.
@@ -27,7 +27,7 @@ def extract_USDC_prices(graph_data):
     # print("swapsL",swaps)
     for swap in reversed(swaps):
         price = None
-        token_in = swap.get("tokenIn", {})
+        token_in = swap.get("tokenOut", {})
         # We assume WETH is the asset of interest.
         # print(token_in)
         try:
@@ -39,6 +39,76 @@ def extract_USDC_prices(graph_data):
             prices.append(price)
     # print(prices)
     return prices
+
+def calculate_macd_with_signals(prices, short=12, long=26, signal=9):
+    """
+    Calculate MACD and generate trading signals for a list of prices.
+    This function is expected by the unified server.
+    Uses adaptive periods for smaller datasets.
+    
+    Parameters:
+      prices - List of float prices in chronological order
+      short - Short EMA period (default: 12)
+      long - Long EMA period (default: 26) 
+      signal - Signal line EMA period (default: 9)
+    
+    Returns:
+      Dictionary with MACD values and signals
+    """
+    data_length = len(prices)
+    
+    # Adaptive periods for smaller datasets
+    if data_length < 26:
+        if data_length >= 14:
+            # Use smaller periods for limited data
+            short = min(short, 5)
+            long = min(long, 10)
+            signal = min(signal, 5)
+        else:
+            return {
+                "macd": [],
+                "signal": [],
+                "signals": [],
+                "error": "Insufficient data for MACD calculation"
+            }
+    
+    if data_length < max(short, long, signal):
+        return {
+            "macd": [],
+            "signal": [],
+            "signals": [],
+            "error": f"Need at least {max(short, long, signal)} data points for MACD calculation"
+        }
+    
+    macd_line, signal_line = compute_macd(prices, short, long, signal)
+    
+    # Generate trading signals based on MACD crossovers
+    signals = []
+    for i in range(1, len(macd_line)):
+        if macd_line[i] is None or signal_line[i] is None:
+            signals.append("HOLD")
+            continue
+        if macd_line[i-1] is None or signal_line[i-1] is None:
+            signals.append("HOLD")
+            continue
+            
+        # Crossover detection
+        if macd_line[i] > signal_line[i] and macd_line[i-1] <= signal_line[i-1]:
+            signals.append("BUY")
+        elif macd_line[i] < signal_line[i] and macd_line[i-1] >= signal_line[i-1]:
+            signals.append("SELL")
+        else:
+            signals.append("HOLD")
+    
+    return {
+        "macd": [m for m in macd_line if m is not None],
+        "signal": [s for s in signal_line if s is not None],
+        "signals": signals,
+        "latest_macd": macd_line[-1] if macd_line and macd_line[-1] is not None else 0,
+        "latest_signal": signal_line[-1] if signal_line and signal_line[-1] is not None else 0,
+        "latest_trading_signal": signals[-1] if signals else "HOLD",
+        "parameters": {"short": short, "long": long, "signal": signal}
+    }
 
 def compute_ema(prices, period):
     """Robust EMA calculation with input validation"""

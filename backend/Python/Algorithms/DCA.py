@@ -1,4 +1,3 @@
-
 #############################  LONG TERM LOW RISK TRADING STRATEGY  #############################
 #############################  DOLLAR COST AVERAGING   #############################
 
@@ -37,6 +36,67 @@ def extract_weth_prices(graph_data):
         if price and price > 0:
             prices.append(price)
     return prices
+
+def calculate_dca_with_signals(prices, investment_interval=7, investment_amount=100):
+    """
+    Calculate DCA strategy and generate consistent trading signals.
+    For DCA (Dollar Cost Averaging), we consistently recommend BUY at regular intervals.
+    This function is expected by the unified server.
+    
+    Parameters:
+      prices - List of float prices in chronological order
+      investment_interval - How often to invest (default: 7 = weekly)
+      investment_amount - Amount to invest each time (default: 100 USDC)
+    
+    Returns:
+      Dictionary with DCA values and signals
+    """
+    if len(prices) < investment_interval:
+        return {
+            "prices": [],
+            "signals": [],
+            "average_price": 0,
+            "error": "Insufficient data for DCA calculation"
+        }
+    
+    signals = []
+    investment_points = []
+    total_invested = 0
+    total_tokens = 0
+    
+    # DCA strategy: invest at regular intervals
+    for i in range(investment_interval-1, len(prices), investment_interval):
+        price = prices[i]
+        signals.append("BUY")  # DCA always buys
+        investment_points.append({
+            "price": price,
+            "amount": investment_amount,
+            "tokens_bought": investment_amount / price
+        })
+        total_invested += investment_amount
+        total_tokens += investment_amount / price
+    
+    # Fill remaining periods with HOLD
+    current_signals = []
+    signal_index = 0
+    for i in range(len(prices)):
+        if i % investment_interval == investment_interval - 1 and signal_index < len(signals):
+            current_signals.append(signals[signal_index])
+            signal_index += 1
+        else:
+            current_signals.append("HOLD")
+    
+    average_price = total_invested / total_tokens if total_tokens > 0 else 0
+    
+    return {
+        "prices": prices,
+        "signals": current_signals,
+        "investment_points": investment_points,
+        "average_price": average_price,
+        "total_invested": total_invested,
+        "total_tokens": total_tokens,
+        "latest_signal": current_signals[-1] if current_signals else "BUY"
+    }
 
 def extract_latest_price(graph_data, asset_type="WETH"):
     """

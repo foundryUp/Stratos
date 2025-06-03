@@ -17,7 +17,7 @@ const TOKEN_ADDRESSES = {
   DAI: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
   WETH: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
   WBTC: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
-  USDC: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // Correct USDC address
+  USDC: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC for trading pairs
   ETH: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", // Placeholder for native ETH
 };
 
@@ -63,12 +63,24 @@ export async function fetchTokenBalances(account) {
   const balancesObj = {};
   try {
     for (const [token, address] of Object.entries(TOKEN_ADDRESSES)) {
+      if (token === "ETH") continue; // Skip ETH placeholder
+      
       const tokenContract = new web3.eth.Contract(ERC20ABI, address);
       console.log(`Fetching ${token} balance from ${address}...`);
       const balance = await tokenContract.methods.balanceOf(account).call();
       console.log(`${token} raw balance:`, balance);
-      // Assuming 18 decimals; adjust if needed
-      balancesObj[token] = web3.utils.fromWei(balance, "ether");
+      
+      // Handle different decimal places
+      if (token === "USDC" || token === "USDT") {
+        // USDC and USDT have 6 decimals
+        balancesObj[token] = web3.utils.fromWei(balance, "mwei");
+      } else if (token === "WBTC") {
+        // WBTC has 8 decimals
+        balancesObj[token] = (parseFloat(balance) / Math.pow(10, 8)).toString();
+      } else {
+        // Most tokens (WETH, DAI) have 18 decimals
+        balancesObj[token] = web3.utils.fromWei(balance, "ether");
+      }
     }
     console.log("User Token Balances:", balancesObj);
     return balancesObj;
@@ -459,3 +471,227 @@ export async function getContractOwner() {
     throw error;
   }
 }
+
+/**
+ * Trading Engine Functions - Updated for new TradingEngine contract
+ */
+
+// TradingEngine contract configuration (update after deployment)
+const TRADING_ENGINE_ADDRESS = "0xfE435387201D3327983d19293B60C1C014E61650"; // Updated with new USDC-based contract address
+const TRADING_ENGINE_ABI = [
+  {
+    "type": "function",
+    "name": "buyToken",
+    "inputs": [
+      {"name": "tokenSymbol", "type": "string"},
+      {"name": "amountIn", "type": "uint256"},
+      {"name": "minAmountOut", "type": "uint256"}
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "sellToken",
+    "inputs": [
+      {"name": "tokenSymbol", "type": "string"},
+      {"name": "amountIn", "type": "uint256"},
+      {"name": "minAmountOut", "type": "uint256"}
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getExpectedOutput",
+    "inputs": [
+      {"name": "tokenSymbol", "type": "string"},
+      {"name": "amountIn", "type": "uint256"},
+      {"name": "isBuy", "type": "bool"}
+    ],
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getTokenAddress",
+    "inputs": [{"name": "symbol", "type": "string"}],
+    "outputs": [{"name": "", "type": "address"}],
+    "stateMutability": "view"
+  }
+];
+
+/**
+ * Execute a trade using the new TradingEngine contract (USDC-based)
+ * @param {string} action - "BUY" or "SELL"
+ * @param {string} tokenSymbol - Token symbol (WBTC, DAI, WETH)
+ * @param {string} amount - Amount to trade
+ */
+export async function executeTrade(action, tokenSymbol, amount) {
+  if (!web3 || !currentAccount) {
+    throw new Error("Wallet not connected");
+  }
+
+  try {
+    const tradingContract = new web3.eth.Contract(TRADING_ENGINE_ABI, TRADING_ENGINE_ADDRESS);
+    
+    console.log(`Executing ${action} trade:`, { tokenSymbol, amount });
+
+    // Smart contract now uses USDC as base currency
+    const usdcAddress = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"; // USDC address
+    
+    if (action.toUpperCase() === "BUY") {
+      // BUY means: spend USDC to get the target token
+      console.log(`Buying ${tokenSymbol} with USDC`);
+      
+      // Convert amount to USDC (6 decimals)
+      const usdcAmountInWei = web3.utils.toWei(amount.toString(), "mwei"); // mwei = 6 decimals
+      
+      // Approve USDC for the trading contract
+      await approveTokenForTrading(usdcAddress, usdcAmountInWei);
+      
+      // Get expected output for slippage protection (5% slippage)
+      const expectedOutput = await tradingContract.methods
+        .getExpectedOutput(tokenSymbol, usdcAmountInWei, true)
+        .call();
+      const minAmountOut = (BigInt(expectedOutput) * BigInt(95)) / BigInt(100); // 5% slippage
+      
+      // Execute buy (spend USDC to get tokenSymbol)
+      const tx = await tradingContract.methods
+        .buyToken(tokenSymbol, usdcAmountInWei, minAmountOut.toString())
+        .send({ from: currentAccount });
+      
+      console.log("Buy transaction completed:", tx.transactionHash);
+      return tx;
+      
+    } else if (action.toUpperCase() === "SELL") {
+      // SELL means: sell the target token to get USDC
+      console.log(`Selling ${tokenSymbol} for USDC`);
+      
+      // Convert amount to token decimals (18 decimals for most tokens)
+      const tokenAmountInWei = web3.utils.toWei(amount.toString(), "ether");
+      
+      // Get token address and approve it
+      const tokenAddress = await tradingContract.methods
+        .getTokenAddress(tokenSymbol)
+        .call();
+      
+      // Approve the target token for selling
+      await approveTokenForTrading(tokenAddress, tokenAmountInWei);
+      
+      // Get expected output for slippage protection (5% slippage)
+      const expectedOutput = await tradingContract.methods
+        .getExpectedOutput(tokenSymbol, tokenAmountInWei, false)
+        .call();
+      const minAmountOut = (BigInt(expectedOutput) * BigInt(95)) / BigInt(100); // 5% slippage
+      
+      // Execute sell (sell tokenSymbol to get USDC)
+      const tx = await tradingContract.methods
+        .sellToken(tokenSymbol, tokenAmountInWei, minAmountOut.toString())
+        .send({ from: currentAccount });
+      
+      console.log("Sell transaction completed:", tx.transactionHash);
+      return tx;
+      
+    } else {
+      throw new Error(`Unsupported action: ${action}`);
+    }
+    
+  } catch (error) {
+    console.error("Error executing trade:", error);
+    throw error;
+  }
+}
+
+/**
+ * Approve token for the trading engine
+ * @param {string} tokenAddress - Token contract address
+ * @param {string} amount - Amount to approve in wei
+ */
+export async function approveTokenForTrading(tokenAddress, amount) {
+  if (!web3 || !currentAccount) {
+    throw new Error("Wallet not connected");
+  }
+  
+  try {
+    const tokenContract = new web3.eth.Contract(ERC20ABI, tokenAddress);
+    
+    console.log("Approving tokens for trading:", { tokenAddress, amount });
+    
+    const approveTx = await tokenContract.methods
+      .approve(TRADING_ENGINE_ADDRESS, amount)
+      .send({ from: currentAccount });
+      
+    console.log("Tokens approved for trading. Tx:", approveTx.transactionHash);
+    return true;
+  } catch (error) {
+    console.error("Error approving tokens for trading:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get trading signals from Python backend
+ * @param {string} pair - Trading pair (weth_usdc, wbtc_usdc, dai_usdc)
+ * @param {string} term - Term (short, long)
+ * @param {string} riskLevel - Risk level (high, low)
+ */
+export const getTradingSignals = async (pair, term, riskLevel) => {
+  try {
+    console.log(`Fetching trading signals from Python backend: ${pair} ${term} ${riskLevel}`);
+    
+    // Map frontend pair names to backend endpoints
+    const pairMapping = {
+      'weth_usdc': 'http://localhost:5050',
+      'wbtc_usdc': 'http://localhost:5051', 
+      'dai_usdc': 'http://localhost:5052'
+    };
+    
+    const baseUrl = pairMapping[pair];
+    if (!baseUrl) {
+      throw new Error(`Unsupported trading pair: ${pair}`);
+    }
+    
+    const url = `${baseUrl}/decisions/${term}/${riskLevel}`;
+    console.log(`Making request to: ${url}`);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      mode: 'cors'
+    });
+    
+    console.log(`Response status: ${response.status}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('Trading signals received:', data);
+    
+    // Return the full response data
+    return data;
+    
+  } catch (error) {
+    console.error('Error fetching trading signals:', error);
+    
+    // Return a mock response for testing if the backend is unreachable
+    if (error.message.includes('Failed to fetch') || error.message.includes('ERR_BLOCKED_BY_CLIENT')) {
+      console.warn('Backend unreachable, returning mock data for testing');
+      return {
+        algorithm: term === 'short' ? 'RSI' : 'MACD',
+        decision: {
+          signal: pair === 'weth_usdc' ? 'SELL' : pair === 'wbtc_usdc' ? 'BUY' : 'HOLD',
+          confidence: 'MEDIUM'
+        },
+        mock: true
+      };
+    }
+    
+    throw error;
+  }
+};

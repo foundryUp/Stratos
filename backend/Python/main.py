@@ -1,262 +1,235 @@
+import subprocess
 import time
 import requests
-import json
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+import sys
+import signal
 import os
-from groq import Groq
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+app = Flask(__name__)
+CORS(app)
 
-# Configuration
-POOL_CONFIG = {
-    "WETH": {
-        "pool_id": "0xc31e54c7a869b9fcbecc14363cf510d1c41fa443",
-        "token_symbol": "WETH",
-        "rsi_period": 5,
-        "overbought": 70,
-        "oversold": 30
-    },
-    "WBTC": {
-        "pool_id": "0x0e4831319a50228b9e450861297ab92dee15b44f",
-        "token_symbol": "WBTC",
-        "rsi_period": 5,
-        "overbought": 75,
-        "oversold": 25
-    },
-    "DAI": {
-        "pool_id": "0xf0428617433652c9dc6d1093a42adfbf30d29f74",
-        "token_symbol": "DAI",
-        "rsi_period": 7,
-        "overbought": 65,
-        "oversold": 35
-    }
+# Server configurations - updated to use server.py
+SERVER_CONFIGS = {
+    "weth_usdc": {"port": 5050, "script": "servers/weth_usdc/server.py"},
+    "wbtc_usdc": {"port": 5051, "script": "servers/wbtc_usdc/server.py"},
+    "dai_usdc": {"port": 5052, "script": "servers/dai_usdc/server.py"}
 }
 
-GROQ_MODEL = "llama3-70b-8192"
-SUBGRAPH_ENDPOINT = "https://gateway.thegraph.com/api/subgraphs/id/FQ6JYszEKApsBpAmiHesRsd9Ygc6mzmpNRANeVQFYoVX"
-HEADERS = {"Authorization": f"Bearer {os.getenv('GRAPH_API_KEY')}"}
+# Store server processes
+server_processes = {}
 
-# Initialize Groq client
-groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+# Algorithm mapping for reference
+ALGORITHM_MAP = {
+    "short_high": "RSI",     # SHORT TERM HIGH RISK
+    "long_high": "MACD",     # LONG TERM HIGH RISK
+    "short_low": "MA",       # SHORT TERM LOW RISK
+    "long_low": "DCA"        # LONG TERM LOW RISK
+}
 
-def fetch_pool_data(pool_id):
-    """Generic pool data fetcher with retry logic"""
-    query = f"""
-    {{
-      swaps(
-        orderBy: timestamp
-        orderDirection: desc
-        where: {{pool: "{pool_id}"}}
-        first: 10
-      ) {{
-        pool {{
-          activeLiquidity
-          inputTokenBalances
-          inputTokenBalancesUSD
-        }}
-        tokenIn {{
-          lastPriceUSD
-          symbol
-        }}
-        tokenOut {{
-          lastPriceUSD
-          symbol
-        }}
-      }}
-    }}
-    """
-    for _ in range(3):
+def start_server(pair_name, config):
+    """Start a token pair server"""
+    try:
+        process = subprocess.Popen([
+            sys.executable, config["script"]
+        ], cwd=os.getcwd())
+        server_processes[pair_name] = process
+        time.sleep(2)  # Give server time to start
+        print(f"✅ Started {pair_name} server on port {config['port']}")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to start {pair_name} server: {e}")
+        return False
+
+def stop_server(pair_name):
+    """Stop a token pair server"""
+    if pair_name in server_processes:
         try:
-            response = requests.post(
-                SUBGRAPH_ENDPOINT,
-                json={"query": query},
-                headers=HEADERS,
-                timeout=10
-            )
-            response.raise_for_status()
-            return response.json()
+            server_processes[pair_name].terminate()
+            server_processes[pair_name].wait(timeout=5)
+            del server_processes[pair_name]
+            print(f"🛑 Stopped {pair_name} server")
+            return True
         except Exception as e:
-            print(f"Retrying {pool_id}... Error: {str(e)}")
-            time.sleep(2)
-    return None
+            print(f"❌ Error stopping {pair_name} server: {e}")
+            return False
+    return False
 
-def extract_token_prices(data, token_symbol):
-    """Robust price extraction with data validation"""
-    prices = []
-    for swap in reversed(data.get("data", {}).get("swaps", [])):
-        try:
-            in_token = swap.get("tokenIn", {})
-            out_token = swap.get("tokenOut", {})
-            
-            if in_token.get("symbol") == token_symbol:
-                price = float(in_token.get("lastPriceUSD", 0))
-            elif out_token.get("symbol") == token_symbol:
-                price = float(out_token.get("lastPriceUSD", 0))
-            else:
-                continue
-                
-            if price > 0:
-                prices.append(price)
-        except (ValueError, TypeError):
-            continue
-    return prices
+def check_server_health(pair_name, port):
+    """Check if a server is healthy"""
+    try:
+        response = requests.get(f"http://localhost:{port}/health", timeout=2)
+        return response.status_code == 200
+    except:
+        return False
 
-def compute_rsi(prices, period=14):
-    """Professional-grade RSI calculation"""
-    if len(prices) < period + 1:
-        return None
+def start_all_servers():
+    """Start all token pair servers"""
+    print("🚀 Starting all token pair servers...")
+    for pair_name, config in SERVER_CONFIGS.items():
+        start_server(pair_name, config)
 
-    deltas = [prices[i] - prices[i-1] for i in range(1, len(prices))]
-    gains = [d if d > 0 else 0 for d in deltas]
-    losses = [-d if d < 0 else 0 for d in deltas]
+def stop_all_servers():
+    """Stop all token pair servers"""
+    print("🛑 Stopping all servers...")
+    for pair_name in list(server_processes.keys()):
+        stop_server(pair_name)
 
-    avg_gain = sum(gains[:period]) / period
-    avg_loss = sum(losses[:period]) / period
+def signal_handler(sig, frame):
+    """Handle shutdown signals"""
+    print("\n📴 Shutting down...")
+    stop_all_servers()
+    sys.exit(0)
 
-    for i in range(period, len(gains)):
-        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
-        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+# Register signal handlers
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
-    if avg_loss == 0:
-        return 100.0
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check for the routing server"""
+    server_statuses = {}
+    for pair_name, config in SERVER_CONFIGS.items():
+        server_statuses[pair_name] = {
+            "healthy": check_server_health(pair_name, config["port"]),
+            "port": config["port"]
+        }
+    
+    return jsonify({
+        "routing_server": "healthy",
+        "servers": server_statuses,
+        "algorithms": ALGORITHM_MAP
+    })
 
-    rs = avg_gain / avg_loss
-    return 100 - (100 / (1 + rs))
+@app.route('/pairs', methods=['GET'])
+def get_pairs():
+    """Get list of available trading pairs"""
+    return jsonify({
+        "pairs": list(SERVER_CONFIGS.keys()),
+        "algorithms": ALGORITHM_MAP,
+        "endpoints": {
+            "new_format": "/decisions/{pair}/{term}/{risk}",
+            "legacy_format": "/decisions/{pair}/high"
+        }
+    })
 
-def ai_safety_check(asset_data):
-    """AI-powered decision validation"""
-    system_prompt = f"""Analyze {asset_data['symbol']} trading opportunity:
-- Current RSI: {asset_data['rsi']}
-- Price: ${asset_data['price']}
-- Recent volatility: {asset_data['volatility']}
-- Market conditions: {asset_data['market_condition']}
-
-Recommend BUY/SELL/HOLD with 1-word response."""
+@app.route('/decisions/<pair>/<term>/<risk>', methods=['GET'])
+def get_pair_decision_with_algorithm(pair, term, risk):
+    """
+    Get algorithmic decision for a specific pair with term and risk parameters
+    
+    Parameters:
+      pair: Token pair (weth_usdc, wbtc_usdc, dai_usdc)
+      term: 'short' or 'long'
+      risk: 'high' or 'low'
+    
+    Routes to appropriate algorithm:
+      short + high = RSI
+      long + high = MACD  
+      short + low = MA
+      long + low = DCA
+    """
+    if pair not in SERVER_CONFIGS:
+        return jsonify({"error": f"Pair '{pair}' not supported. Available pairs: {list(SERVER_CONFIGS.keys())}"}), 400
+    
+    config = SERVER_CONFIGS[pair]
+    
+    # Check if server is healthy
+    if not check_server_health(pair, config["port"]):
+        return jsonify({"error": f"Server for {pair} is not available"}), 503
     
     try:
-        response = groq_client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": "Make low-risk trading decision"}
-            ],
-            model=GROQ_MODEL,
-            temperature=0.2,
-            max_tokens=1
+        # Forward request to the specific pair server
+        response = requests.get(
+            f"http://localhost:{config['port']}/decisions/{term}/{risk}",
+            timeout=10
         )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        print(f"AI Safety Check Failed: {str(e)}")
-        return "HOLD"
-
-def calculate_position(rsi, decision, base_size=10):
-    """Dynamic position sizing algorithm"""
-    if decision == "BUY":
-        return base_size * max(0, (30 - rsi) / 30)
-    elif decision == "SELL":
-        return base_size * min(2, (rsi - 70) / 30)
-    return 0
-
-def analyze_market_conditions(prices):
-    """Market condition classifier"""
-    if len(prices) < 3:
-        return "neutral"
-    
-    short_term = sum(prices[-3:])/3
-    mid_term = sum(prices[-10:])/10 if len(prices) >=10 else short_term
-    return "bullish" if short_term > mid_term else "bearish"
-
-def trading_engine():
-    """Main trading decision engine"""
-    decisions = {}
-    
-    for asset, config in POOL_CONFIG.items():
-        asset_data = {"symbol": config["token_symbol"]}
         
-        # Fetch and process data
-        raw_data = fetch_pool_data(config["pool_id"])
-        if not raw_data:
-            decisions[asset] = {"action": "HOLD", "reason": "data_failure"}
-            continue
-            
-        prices = extract_token_prices(raw_data, config["token_symbol"])
-        if len(prices) < config["rsi_period"] + 1:
-            decisions[asset] = {"action": "HOLD", "reason": "insufficient_data"}
-            continue
-            
-        # Calculate metrics
-        rsi = compute_rsi(prices[-20:], config["rsi_period"])  # Use last 20 prices
-        asset_data.update({
-            "rsi": rsi,
-            "price": prices[-1],
-            "volatility": (max(prices[-10:]) - min(prices[-10:])) / min(prices[-10:]),
-            "market_condition": analyze_market_conditions(prices)
-        })
-        
-        # Generate initial decision
-        if rsi > config["overbought"]:
-            decision = "SELL"
-        elif rsi < config["oversold"]:
-            decision = "BUY"
+        if response.status_code == 200:
+            return response.json()
         else:
-            decision = "HOLD"
+            return jsonify({"error": f"Server returned status {response.status_code}"}), response.status_code
             
-        # AI validation
-        final_decision = ai_safety_check(asset_data)
-        position_size = calculate_position(rsi, final_decision)
-        
-        decisions[asset] = {
-            "action": final_decision,
-            "size": round(position_size, 2),
-            "confidence": min(100, max(0, abs(rsi - 50))),
-            "metrics": asset_data
-        }
-    
-    return decisions
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Failed to connect to {pair} server: {str(e)}"}), 503
 
-def main_loop(interval=300):
-    """Core trading loop"""
-    while True:
-        start_time = time.time()
-        print(f"\n=== Trading Cycle {time.ctime()} ===")
-        
-        decisions = trading_engine()
-        
-        output = {
-            "timestamp": int(start_time),
-            "decisions": decisions,
-            "performance": {
-                "processing_time": round(time.time() - start_time, 2),
-                "success_rate": round(
-                    sum(1 for d in decisions.values() if d["action"] != "HOLD") 
-                    / len(decisions), 
-                    2
-                )
-            }
-        }
-        
-        print(json.dumps(output, indent=2))
-        
-        if interval > 0:
-            time.sleep(interval)
+@app.route('/decisions/<pair>/high', methods=['GET'])
+def get_pair_decision_legacy(pair):
+    """
+    Legacy endpoint - defaults to short term high risk (RSI)
+    Maintains backward compatibility
+    """
+    return get_pair_decision_with_algorithm(pair, 'short', 'high')
 
-if __name__ == "__main__":
-    # Initial test with mock data
-    test_data = {
-        "data": {
-            "swaps": [
-                {
-                    "tokenIn": {"symbol": "WETH", "lastPriceUSD": "1800"},
-                    "tokenOut": {"symbol": "USDC", "lastPriceUSD": "1.0"}
-                },
-                {
-                    "tokenIn": {"symbol": "USDC", "lastPriceUSD": "1.0"},
-                    "tokenOut": {"symbol": "WETH", "lastPriceUSD": "1850"}
-                }
-            ]
-        }
-    }
-    print("RSI Test:", compute_rsi([1800, 1850, 1820, 1780, 1900]))
+# Additional legacy endpoint for the original format
+@app.route('/decisions/high', methods=['GET'])
+def get_high_frequency_decision_legacy():
+    """
+    Original legacy endpoint - defaults to WETH/USDC short term high risk (RSI)
+    """
+    return get_pair_decision_with_algorithm('weth_usdc', 'short', 'high')
+
+@app.route('/servers/start/<pair>', methods=['POST'])
+def start_specific_server(pair):
+    """Start a specific server"""
+    if pair not in SERVER_CONFIGS:
+        return jsonify({"error": f"Unknown pair: {pair}"}), 400
     
-    # Start main loop
-    main_loop(interval=300)
+    if start_server(pair, SERVER_CONFIGS[pair]):
+        return jsonify({"message": f"Started {pair} server"})
+    else:
+        return jsonify({"error": f"Failed to start {pair} server"}), 500
+
+@app.route('/servers/stop/<pair>', methods=['POST'])  
+def stop_specific_server(pair):
+    """Stop a specific server"""
+    if pair not in SERVER_CONFIGS:
+        return jsonify({"error": f"Unknown pair: {pair}"}), 400
+    
+    if stop_server(pair):
+        return jsonify({"message": f"Stopped {pair} server"})
+    else:
+        return jsonify({"error": f"Failed to stop {pair} server"}), 500
+
+@app.route('/servers/restart/<pair>', methods=['POST'])
+def restart_specific_server(pair):
+    """Restart a specific server"""
+    if pair not in SERVER_CONFIGS:
+        return jsonify({"error": f"Unknown pair: {pair}"}), 400
+    
+    stop_server(pair)
+    time.sleep(1)
+    if start_server(pair, SERVER_CONFIGS[pair]):
+        return jsonify({"message": f"Restarted {pair} server"})
+    else:
+        return jsonify({"error": f"Failed to restart {pair} server"}), 500
+
+if __name__ == '__main__':
+    try:
+        # Start all servers
+        start_all_servers()
+        
+        print("🎯 Main routing server starting on port 5049...")
+        print(f"📊 Available pairs: {list(SERVER_CONFIGS.keys())}")
+        print(f"🧠 Algorithm mapping: {ALGORITHM_MAP}")
+        print("🔗 New endpoints:")
+        print("   GET /decisions/{pair}/{term}/{risk} - Algorithm-specific decisions")
+        print("   Examples:")
+        print("     /decisions/weth_usdc/short/high  -> RSI")
+        print("     /decisions/weth_usdc/long/high   -> MACD")
+        print("     /decisions/weth_usdc/short/low   -> MA")
+        print("     /decisions/weth_usdc/long/low    -> DCA")
+        print("🔗 Legacy endpoints:")
+        print("   GET /decisions/{pair}/high - Defaults to RSI")
+        print("   GET /decisions/high - Defaults to WETH/USDC RSI")
+        print("🔗 Management endpoints:")
+        print("   GET /health - Server status")
+        print("   GET /pairs - Available pairs and algorithms")
+        
+        app.run(host='0.0.0.0', port=5049, debug=False)
+        
+    except KeyboardInterrupt:
+        print("\n📴 Shutting down...")
+    finally:
+        stop_all_servers()

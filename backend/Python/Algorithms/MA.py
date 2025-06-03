@@ -41,6 +41,62 @@ def extract_weth_prices(graph_data):
     # print(prices)
     return prices
 
+def calculate_ma_with_signals(prices, short_window=3, long_window=5, threshold=0.005):
+    """
+    Calculate Moving Average and generate trading signals for a list of prices.
+    This function is expected by the unified server.
+    
+    Parameters:
+      prices - List of float prices in chronological order
+      short_window - Short moving average window (default: 3)
+      long_window - Long moving average window (default: 5)
+      threshold - Minimum relative difference to trigger trades (default: 0.005 = 0.5%)
+    
+    Returns:
+      Dictionary with MA values and signals
+    """
+    if len(prices) < long_window:
+        return {
+            "short_ma": [],
+            "long_ma": [],
+            "signals": [],
+            "error": "Insufficient data for MA calculation"
+        }
+    
+    short_ma_values = []
+    long_ma_values = []
+    signals = []
+    
+    # Calculate moving averages for each valid point
+    for i in range(long_window - 1, len(prices)):
+        short_ma = compute_moving_average(prices[:i+1], short_window)
+        long_ma = compute_moving_average(prices[:i+1], long_window)
+        
+        short_ma_values.append(short_ma)
+        long_ma_values.append(long_ma)
+        
+        # Generate signal based on crossover
+        if short_ma and long_ma:
+            relative_difference = (short_ma - long_ma) / long_ma
+            
+            if relative_difference > threshold:
+                signals.append("BUY")
+            elif relative_difference < -threshold:
+                signals.append("SELL") 
+            else:
+                signals.append("HOLD")
+        else:
+            signals.append("HOLD")
+    
+    return {
+        "short_ma": short_ma_values,
+        "long_ma": long_ma_values,  
+        "signals": signals,
+        "latest_short_ma": short_ma_values[-1] if short_ma_values else 0,
+        "latest_long_ma": long_ma_values[-1] if long_ma_values else 0,
+        "latest_signal": signals[-1] if signals else "HOLD"
+    }
+
 def compute_moving_average(prices, window):
     """
     Compute the simple moving average (SMA) for the last 'window' prices.

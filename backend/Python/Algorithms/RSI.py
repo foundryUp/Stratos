@@ -40,6 +40,53 @@ def extract_weth_prices(graph_data):
     # print(prices)
     return prices
 
+def calculate_rsi_with_signals(prices, period=14):
+    """
+    Calculate RSI and generate trading signals for a list of prices.
+    This is the function expected by the server files.
+    
+    Parameters:
+      prices - List of float prices in chronological order
+      period - RSI calculation period (default: 14)
+    
+    Returns:
+      Dictionary with RSI values and signals
+    """
+    if len(prices) < period + 1:
+        return {
+            "rsi": [],
+            "signals": [],
+            "error": "Insufficient data for RSI calculation"
+        }
+    
+    rsi_values = []
+    signals = []
+    
+    # Calculate RSI for each point where we have enough data
+    for i in range(period, len(prices)):
+        price_window = prices[i-period:i+1]
+        rsi = compute_rsi(price_window, period)
+        if rsi is not None:
+            rsi_values.append(rsi)
+            
+            # Generate signal based on RSI (more sensitive thresholds for demo)
+            if rsi > 55:
+                signals.append("SELL")
+            elif rsi < 45:
+                signals.append("BUY")
+            else:
+                signals.append("HOLD")
+        else:
+            rsi_values.append(50)  # Neutral RSI if calculation fails
+            signals.append("HOLD")
+    
+    return {
+        "rsi": rsi_values,
+        "signals": signals,
+        "latest_rsi": rsi_values[-1] if rsi_values else 50,
+        "latest_signal": signals[-1] if signals else "HOLD"
+    }
+
 def compute_rsi(prices, period=5):
     """
     Computes the Relative Strength Index (RSI) from a list of prices.
@@ -86,7 +133,7 @@ def compute_rsi(prices, period=5):
     rsi = 100 - (100 / (1 + rs))
     return rsi
 
-def rsi_strategy_decision(graph_data, rsi_period=5, overbought_threshold=70, oversold_threshold=30):
+def rsi_strategy_decision(graph_data, rsi_period=5, overbought_threshold=55, oversold_threshold=45):
     """
     Implements an RSI-based trading decision strategy for short-term, high-risk trading.
     
@@ -101,8 +148,8 @@ def rsi_strategy_decision(graph_data, rsi_period=5, overbought_threshold=70, ove
     Parameters:
       graph_data - JSON response from the subgraph.
       rsi_period - The lookback period for the RSI calculation.
-      overbought_threshold - RSI value above which the asset is considered overbought (default: 70).
-      oversold_threshold - RSI value below which the asset is considered oversold (default: 30).
+      overbought_threshold - RSI value above which the asset is considered overbought (default: 55).
+      oversold_threshold - RSI value below which the asset is considered oversold (default: 45).
     
     Returns:
       A dictionary containing:
