@@ -82,19 +82,24 @@ const GeneralAI = () => {
       }
 
       const data = await response.json();
-      console.log("Response from backend:", data);
+      console.log("🟢 Frontend - Response from backend:", data);
 
       if (!data.response) {
         throw new Error("Invalid response from server");
       }
 
+      console.log("🟢 Frontend - Raw AI response:", data.response);
+      console.log("🟢 Frontend - AI response type:", typeof data.response);
+
       // Parse the command from the response
       let commandObj;
       try {
         commandObj = JSON.parse(data.response);
-        console.log("Parsed command object:", commandObj);
+        console.log("🟢 Frontend - Parsed command object:", commandObj);
+        console.log("🟢 Frontend - Command from AI:", commandObj.command);
       } catch (error) {
-        console.error("Error parsing command:", error);
+        console.error("🟢 Frontend - Error parsing command:", error);
+        console.error("🟢 Frontend - Failed to parse this response:", data.response);
         throw new Error("Invalid command format from server");
       }
       

@@ -4,6 +4,7 @@
     "description": "A trading bot for the Sepolia testnet using Alchemy and 0x APIs.",
     "type": "module",
     "dependencies": {
+        "@ai-sdk/groq": "^1.2.9",
         "@ai-sdk/openai": "^1.1.1",
         "@ankr.com/ankr.js": "0.5.2",
         "@openrouter/ai-sdk-provider": "0.0.6",

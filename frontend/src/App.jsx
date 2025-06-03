@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
 import { MessageSquare, TrendingUp, Menu } from 'lucide-react';
 import GeneralAI from './components/GeneralChat';
-import TradingChat from './components/TradingChat';
+import DefiChat from './components/DefiChat';
 import Homepage from './components/Homepage';
 import TokenPortfolio from './components/TokenPortfolio';
 import IntentAI2 from "./components/TradingChatRSIAlgos.jsx"
@@ -18,8 +18,8 @@ function App() {
             <Route path="/" element={<Homepage />} />
             <Route path="/general" element={<GeneralAI />} />
             <Route path="/trading" element={<IntentAI2 />} />
+            <Route path="/defi" element={<DefiChat />} />
             <Route path="/tokenPortfolio" element={<TokenPortfolio />} />
-            <Route path="/getWeth" element={<TradingChat />} />
           </Routes>
         </main>
       </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Brain, Zap, MessageSquare, TrendingUp, ArrowRight } from 'lucide-react';
+import { Sparkles, Brain, Zap, MessageSquare, TrendingUp, ArrowRight, Coins } from 'lucide-react';
 import Footer from './Footer.jsx'; // Ensure correct path and default import
 
 function Homepage() {
@@ -44,7 +44,7 @@ function Homepage() {
           </p>
 
           {/* Feature cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto mb-12">
             <div
               onClick={() => navigate('/general')}
               className="group p-6 bg-gray-800 bg-opacity-50 backdrop-blur-lg rounded-2xl border border-gray-700 hover:border-blue-500 cursor-pointer transform hover:scale-105 transition-all duration-300"
@@ -74,6 +74,22 @@ function Homepage() {
               </p>
               <div className="flex items-center text-green-500 group-hover:translate-x-2 transition-transform">
                 Start Trading <ArrowRight className="ml-2" size={20} />
+              </div>
+            </div>
+
+            <div
+              onClick={() => navigate('/defi')}
+              className="group p-6 bg-gray-800 bg-opacity-50 backdrop-blur-lg rounded-2xl border border-gray-700 hover:border-purple-500 cursor-pointer transform hover:scale-105 transition-all duration-300"
+            >
+              <div className="flex items-center mb-4">
+                <Coins className="text-purple-500 mr-3" size={24} />
+                <h3 className="text-xl font-semibold">DeFi Assistant</h3>
+              </div>
+              <p className="text-gray-400 mb-4">
+                Interact with Aave protocol - deposit, borrow, repay, and withdraw
+              </p>
+              <div className="flex items-center text-purple-500 group-hover:translate-x-2 transition-transform">
+                Start DeFi <ArrowRight className="ml-2" size={20} />
               </div>
             </div>
           </div>

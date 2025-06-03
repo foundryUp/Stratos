@@ -1,3 +1,8 @@
+
+#############################  LONG TERM LOW RISK TRADING STRATEGY  #############################
+#############################  DOLLAR COST AVERAGING   #############################
+
+
 def extract_weth_prices(graph_data):
     """
     Extracts a chronological list of WETH prices in USD from the subgraph swap data.

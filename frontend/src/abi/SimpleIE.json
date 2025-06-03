@@ -1,79 +1,166 @@
 [
   {
+    "type": "fallback",
+    "stateMutability": "payable"
+  },
+  {
+    "type": "receive",
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "addresses",
     "inputs": [
       {
-        "internalType": "string",
-        "name": "intent",
-        "type": "string"
+        "name": "name",
+        "type": "string",
+        "internalType": "string"
       }
     ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "command",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
-        "internalType": "string",
-        "name": "to",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "amount",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "token",
-        "type": "string"
+        "name": "intent",
+        "type": "string",
+        "internalType": "string"
       }
     ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "names",
+    "inputs": [
+      {
+        "name": "addresses",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "pairs",
+    "inputs": [
+      {
+        "name": "token0",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "token1",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "send",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
-        "internalType": "string",
-        "name": "amountIn",
-        "type": "string"
+        "name": "to",
+        "type": "string",
+        "internalType": "string"
       },
       {
-        "internalType": "string",
-        "name": "amountOutMin",
-        "type": "string"
+        "name": "amount",
+        "type": "string",
+        "internalType": "string"
       },
       {
-        "internalType": "string",
-        "name": "tokenIn",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "tokenOut",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "receiver",
-        "type": "string"
+        "name": "token",
+        "type": "string",
+        "internalType": "string"
       }
     ],
-    "name": "swap",
     "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
+    "stateMutability": "payable"
   },
   {
-    "stateMutability": "payable",
-    "type": "receive"
+    "type": "function",
+    "name": "swap",
+    "inputs": [
+      {
+        "name": "amountIn",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "amountOutMin",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "tokenIn",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "tokenOut",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "receiver",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
   },
   {
-    "stateMutability": "payable",
-    "type": "fallback"
+    "type": "error",
+    "name": "InsufficientSwap",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidCharacter",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidSwap",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidSyntax",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "Overflow",
+    "inputs": []
   }
-] 
+]

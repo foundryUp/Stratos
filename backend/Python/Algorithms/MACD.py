@@ -1,3 +1,6 @@
+
+#############################LONG TERM HIGH RISK TRADING STRATEGY#############################
+#############################MOVING AVERAGE CONVERGENCE DIVERGENCE#############################
 def extract_USDC_prices(graph_data):
     """
     Extracts a chronological list of WETH prices in USD from the subgraph swap data.
