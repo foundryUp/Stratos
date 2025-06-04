@@ -7,6 +7,7 @@ import {
   fetchTokenBalances,
   executeTrade,
 } from "../utils/web3functions";
+import config from "../config/config";
 
 const TradingChat = () => {
   const navigate = useNavigate();
@@ -65,8 +66,8 @@ const TradingChat = () => {
         .map((msg) => `${msg.type === "user" ? "User" : "Assistant"}: ${msg.content}`)
         .join("\n");
 
-      // Use environment variable for backend URL, fallback to localhost for development
-      const NODE_BACKEND_URL = process.env.REACT_APP_NODE_BACKEND_URL || 'http://localhost:5001';
+      // Use config for backend URL
+      const NODE_BACKEND_URL = config.NODE_BACKEND_URL;
 
       // Call backend API for trading chat
       const response = await fetch(`${NODE_BACKEND_URL}/api/tradingchat`, {

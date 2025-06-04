@@ -8,6 +8,7 @@ import {
   SEND_SWAP_CONTRACT,
 } from "../constants/abi";
 import SimpleIEABI from "../abi/SimpleIE.json";
+import config from "../config/config";
 
 let web3;
 let currentAccount = "";
@@ -640,8 +641,8 @@ export const getTradingSignals = async (pair, term, riskLevel) => {
   try {
     console.log(`Fetching trading signals from Python backend: ${pair} ${term} ${riskLevel}`);
     
-    // Use environment variable for backend URL, fallback to localhost for development
-    const PYTHON_BACKEND_URL = process.env.REACT_APP_PYTHON_BACKEND_URL || 'http://localhost:5049';
+    // Use config for backend URL
+    const PYTHON_BACKEND_URL = config.PYTHON_BACKEND_URL;
     
     // For production, we use a single unified backend
     // For development, we can still use individual servers or the unified one
