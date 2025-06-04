@@ -2,7 +2,7 @@
 
 ## Overview
 This guide covers deploying the complete Stratos trading platform with:
-- Python trading backend (algorithms + market data)
+- Python trading backend (algorithms + market data) ✅ **Fixed SubGraph imports**
 - Node.js API server (AI chat + blockchain integration)
 - React frontend (already on Vercel)
 - Smart contracts (on Sepolia testnet)
@@ -13,6 +13,16 @@ This guide covers deploying the complete Stratos trading platform with:
 - Vercel account
 - Infura account (for Ethereum access)
 - MetaMask with Sepolia testnet
+
+## ⚠️ IMPORTANT: Fixed Import Issues
+**Issue**: The deployment was failing with `ModuleNotFoundError: No module named 'weth_usdc_subgraph'`
+
+**Solution**: Created properly named SubGraph modules:
+- `backend/Python/SubGraph/weth_usdc_subgraph.py` with `fetch_weth_usdc_data()`
+- `backend/Python/SubGraph/wbtc_usdc_subgraph.py` with `fetch_wbtc_usdc_data()`
+- `backend/Python/SubGraph/dai_usdc_subgraph.py` with `fetch_dai_usdc_data()`
+
+All these files are now included and tested locally ✅
 
 ## 1. Python Trading Backend (Render)
 
@@ -35,6 +45,18 @@ This guide covers deploying the complete Stratos trading platform with:
 - Health: `GET /health`
 - Trading Signals: `GET /decisions/weth_usdc/short/high`
 - Available Pairs: `GET /pairs`
+
+### ✅ Verification Commands:
+```bash
+# Test locally before deploying
+cd backend/Python && python main.py
+curl http://localhost:5049/health
+curl "http://localhost:5049/decisions/weth_usdc/short/high"
+```
+
+Expected responses:
+- Health: `{"status":"healthy","algorithms":{"short_high":"RSI",...}}`
+- Signals: `{"algorithm":"RSI","decision":{"signal":"HOLD","confidence":"LOW"},...}`
 
 ## 2. Node.js Backend (Render)
 
@@ -212,14 +234,59 @@ jobs:
 ## Troubleshooting
 
 ### Common Issues:
-1. **CORS errors**: Check backend CORS settings
-2. **Network errors**: Verify environment variables
-3. **Contract errors**: Check chain ID and addresses
-4. **API timeouts**: Render free tier sleeps after inactivity
+
+#### 1. **Module Import Errors**
+- **Error**: `ModuleNotFoundError: No module named 'weth_usdc_subgraph'`
+- **Solution**: Ensure all SubGraph files exist with correct function names:
+  ```
+  backend/Python/SubGraph/
+  ├── weth_usdc_subgraph.py (with fetch_weth_usdc_data)
+  ├── wbtc_usdc_subgraph.py (with fetch_wbtc_usdc_data)
+  └── dai_usdc_subgraph.py (with fetch_dai_usdc_data)
+  ```
+
+#### 2. **Algorithm Import Errors** 
+- **Error**: Missing algorithm functions
+- **Solution**: Ensure these functions exist in Algorithms/:
+  ```
+  RSI.py: calculate_rsi_with_signals()
+  MACD.py: calculate_macd_with_signals()
+  MA.py: calculate_ma_with_signals()
+  DCA.py: calculate_dca_with_signals()
+  ```
+
+#### 3. **SubGraph API Issues**
+- **Error**: Empty swaps data or API timeouts
+- **Solution**: Check API key and pool addresses in SubGraph files
+- **Pool Addresses**:
+  - WETH/USDC: `0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640`
+  - WBTC/USDC: `0x99ac8ca7087fa4a2a1fb6357269965a2014abc35`
+  - DAI/USDC: `0x5777d92f208679db4b9778590fa3cab3ac9e2168`
+
+#### 4. **Other Common Issues**
+- **CORS errors**: Check backend CORS settings
+- **Network errors**: Verify environment variables
+- **Contract errors**: Check chain ID and addresses
+- **API timeouts**: Render free tier sleeps after inactivity
 
 ### Logs Access:
 - Render: Dashboard → Service → Logs
 - Vercel: Dashboard → Project → Functions → View Details
 - Browser: Developer Tools → Console
+
+### Debug Commands:
+```bash
+# Test Python backend locally
+cd backend/Python
+python -c "from main import app; print('All imports successful')"
+python main.py &
+curl http://localhost:5049/health
+
+# Test individual SubGraph modules
+python -c "from SubGraph.weth_usdc_subgraph import fetch_weth_usdc_data; print(fetch_weth_usdc_data())"
+
+# Test algorithm modules
+python -c "from Algorithms.RSI import calculate_rsi_with_signals; print('RSI import OK')"
+```
 
 This deployment strategy gives you a fully functional, cloud-hosted trading platform! 
