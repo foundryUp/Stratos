@@ -11,8 +11,32 @@ import { groq } from '@ai-sdk/groq';
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// CORS configuration - allow all origins for development, specific origins for production
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Allow localhost for development
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      return callback(null, true);
+    }
+    
+    // Allow Vercel domains
+    if (origin.includes('vercel.app')) {
+      return callback(null, true);
+    }
+    
+    // Allow any origin for now (you can restrict this later)
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin']
+};
+
 // Middleware
-app.use(cors()); // Enable CORS for frontend communication
+app.use(cors(corsOptions)); // Enable CORS with specific configuration
 app.use(express.json()); // Parse JSON request bodies
 
 app.get("/health", (req, res) => {
@@ -105,8 +129,10 @@ app.post("/api/tradingchat", async (req, res) => {
         if (parts.length === 4) {
           const [, pair, term, risk] = parts;
           try {
-            // Use environment variable for Python backend URL, fallback to localhost for development
-            const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL || 'http://localhost:5049';
+            // Use environment variable for Python backend URL with proper fallback
+            const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL || process.env.REACT_APP_PYTHON_BACKEND_URL || 'http://localhost:5049';
+            
+            console.log("Using Python backend URL:", PYTHON_BACKEND_URL);
 
             // Fetch signal from Python backend using unified endpoint
             const pythonResponse = await fetch(`${PYTHON_BACKEND_URL}/decisions/${pair}/${term}/${risk}`);
@@ -154,7 +180,7 @@ app.post("/api/tradingchat", async (req, res) => {
             });
           } else {
             // Market analysis for specific pair
-            const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL || 'http://localhost:5049';
+            const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL || process.env.REACT_APP_PYTHON_BACKEND_URL || 'http://localhost:5049';
             
             try {
               const pythonResponse = await fetch(`${PYTHON_BACKEND_URL}/health`);
