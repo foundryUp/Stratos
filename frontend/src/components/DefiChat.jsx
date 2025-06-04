@@ -70,8 +70,11 @@ const DefiChat = () => {
         .map((msg) => `${msg.type === "user" ? "User" : "Assistant"}: ${msg.content}`)
         .join("\n");
 
-      // Call backend API
-      const response = await fetch("http://localhost:5001/api/defichat", {
+      // Use environment variable for backend URL, fallback to localhost for development  
+      const NODE_BACKEND_URL = process.env.REACT_APP_NODE_BACKEND_URL || 'http://localhost:5001';
+
+      // Call backend API for DeFi chat
+      const response = await fetch(`${NODE_BACKEND_URL}/api/defichat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

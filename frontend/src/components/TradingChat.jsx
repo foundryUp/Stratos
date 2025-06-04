@@ -65,8 +65,11 @@ const TradingChat = () => {
         .map((msg) => `${msg.type === "user" ? "User" : "Assistant"}: ${msg.content}`)
         .join("\n");
 
+      // Use environment variable for backend URL, fallback to localhost for development
+      const NODE_BACKEND_URL = process.env.REACT_APP_NODE_BACKEND_URL || 'http://localhost:5001';
+
       // Call backend API for trading chat
-      const response = await fetch("http://localhost:5001/api/tradingchat", {
+      const response = await fetch(`${NODE_BACKEND_URL}/api/tradingchat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
