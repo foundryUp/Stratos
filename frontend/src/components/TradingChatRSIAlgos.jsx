@@ -83,7 +83,7 @@ function IntentTradingAlgo() {
       }
       
       console.log("All signals received:", allSignals);
-      
+  
       // Transform signals into the format expected by the UI
       const transformedSignals = {
         timestamp: Date.now(),
@@ -211,11 +211,11 @@ function IntentTradingAlgo() {
       setErrorMessage('Please enter a valid amount.');
       return;
     }
-    
+
     setIsTrading(true);
     setErrorMessage('');
     
-    try {
+      try {
       console.log(`Executing ${decision.action} for ${token} with amount: ${amount}`);
       
       const tx = await executeTrade(decision.action, token, amount);
@@ -354,19 +354,19 @@ function IntentTradingAlgo() {
                 const confidence = String(decision.confidence || 'MEDIUM').toUpperCase();
                 
                 return (
-                  <div key={token} className="bg-[#1A1B3B] rounded-xl p-6 border border-gray-800">
-                    <div className="flex justify-between items-start mb-4">
-                      <h3 className="text-xl font-semibold">{token}</h3>
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                <div key={token} className="bg-[#1A1B3B] rounded-xl p-6 border border-gray-800">
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-xl font-semibold">{token}</h3>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                         action === 'BUY'
-                          ? 'bg-green-600/20 text-green-400 border border-green-500/30'
+                        ? 'bg-green-600/20 text-green-400 border border-green-500/30'
                           : action === 'SELL'
-                          ? 'bg-red-600/20 text-red-400 border border-red-500/30'
-                          : 'bg-gray-600/20 text-gray-400 border border-gray-500/30'
-                      }`}>
+                        ? 'bg-red-600/20 text-red-400 border border-red-500/30'
+                        : 'bg-gray-600/20 text-gray-400 border border-gray-500/30'
+                    }`}>
                         {action}
-                      </span>
-                    </div>
+                    </span>
+                  </div>
                     
                     {/* Display algorithm and confidence */}
                     <div className="mb-4 text-sm text-gray-400">
@@ -379,7 +379,7 @@ function IntentTradingAlgo() {
                     
                     {/* Show trading input only for BUY/SELL signals */}
                     {(action === 'BUY' || action === 'SELL') && (
-                      <div>
+                    <div>
                         <div className="mb-3 p-3 bg-blue-600/10 border border-blue-500/20 rounded-lg">
                           <p className="text-blue-400 text-sm font-medium">
                             🤖 Algorithm Recommendation: {action} {token}
@@ -391,22 +391,22 @@ function IntentTradingAlgo() {
                         
                         <label htmlFor={`amount-${token}`} className="block text-sm text-gray-400 mb-2">
                           {action === 'BUY' ? `USDC to spend buying ${token}:` : `${token} to sell for USDC:`}
-                        </label>
-                        <input
-                          id={`amount-${token}`}
-                          type="text"
-                          value={inputAmounts[token] || '0.1'}
-                          onChange={(e) =>
-                            setInputAmounts((prev) => ({ ...prev, [token]: e.target.value }))
-                          }
-                          className="mt-1 block w-full bg-gray-700 border border-gray-600 text-white rounded-md p-2"
+                      </label>
+                      <input
+                        id={`amount-${token}`}
+                        type="text"
+                        value={inputAmounts[token] || '0.1'}
+                        onChange={(e) =>
+                          setInputAmounts((prev) => ({ ...prev, [token]: e.target.value }))
+                        }
+                        className="mt-1 block w-full bg-gray-700 border border-gray-600 text-white rounded-md p-2"
                           placeholder={action === 'BUY' ? 
                             (token === 'WETH' ? '100 USDC' : token === 'WBTC' ? '1000 USDC' : '100 USDC') :
                             (token === 'WBTC' ? '0.01' : token === 'DAI' ? '100' : '0.04')
                           }
-                        />
-                        <button
-                          onClick={() => handleTrade(token, decision)}
+                      />
+                      <button
+                        onClick={() => handleTrade(token, decision)}
                           disabled={isTrading}
                           className={`mt-3 w-full px-4 py-2 rounded transition font-medium ${
                             isTrading 
@@ -418,9 +418,9 @@ function IntentTradingAlgo() {
                         >
                           {isTrading ? 'Processing...' : 
                            action === 'BUY' ? `Buy ${token} with USDC` : `Sell ${token} for USDC`}
-                        </button>
-                      </div>
-                    )}
+                      </button>
+                    </div>
+                  )}
                     
                     {/* Show message for HOLD signals */}
                     {action === 'HOLD' && (
@@ -433,7 +433,7 @@ function IntentTradingAlgo() {
                         </p>
                       </div>
                     )}
-                  </div>
+                </div>
                 );
               })}
             </div>

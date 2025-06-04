@@ -12,3 +12,5 @@ cache
 .vscode
 .wake
 cache
+.env.local
+.env.production
