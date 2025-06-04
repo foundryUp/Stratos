@@ -228,10 +228,10 @@ if __name__ == '__main__':
         
     print("🎯 Unified trading server starting...")
     print(f"📊 Available pairs: {list(DATA_FETCHERS.keys())}")
-        print(f"🧠 Algorithm mapping: {ALGORITHM_MAP}")
+    print(f"🧠 Algorithm mapping: {ALGORITHM_MAP}")
     print("🔗 Endpoints:")
-        print("   GET /decisions/{pair}/{term}/{risk} - Algorithm-specific decisions")
-        print("   GET /health - Server status")
-        print("   GET /pairs - Available pairs and algorithms")
+    print("   GET /decisions/{pair}/{term}/{risk} - Algorithm-specific decisions")
+    print("   GET /health - Server status")
+    print("   GET /pairs - Available pairs and algorithms")
         
     app.run(host='0.0.0.0', port=port, debug=False)

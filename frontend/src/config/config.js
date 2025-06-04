@@ -43,13 +43,23 @@ const config = {
     ? 'https://ai-quant-trader.onrender.com'
     : getEnvVar('REACT_APP_PYTHON_BACKEND_URL', 'http://localhost:5049'),
     
+  // Ethereum/Anvil RPC URL for blockchain interactions
+  ETHEREUM_RPC_URL: isVercelRuntime
+    ? getEnvVar('REACT_APP_ETHEREUM_RPC_URL', 'https://your-anvil-node.onrender.com')
+    : getEnvVar('REACT_APP_ETHEREUM_RPC_URL', 'http://localhost:8545'),
+    
+  // Anvil-specific URL (for testing and development)
+  ANVIL_URL: isVercelRuntime
+    ? getEnvVar('REACT_APP_ANVIL_URL', 'https://your-anvil-node.onrender.com')
+    : getEnvVar('REACT_APP_ANVIL_URL', 'http://localhost:8545'),
+    
   // Network configuration
   CHAIN_ID: isVercelRuntime
-    ? '11155111'
+    ? getEnvVar('REACT_APP_CHAIN_ID', '31337')  // Anvil chain ID
     : getEnvVar('REACT_APP_CHAIN_ID', '31337'),
     
   NETWORK_NAME: isVercelRuntime
-    ? 'sepolia'
+    ? getEnvVar('REACT_APP_NETWORK_NAME', 'anvil')
     : getEnvVar('REACT_APP_NETWORK_NAME', 'localhost')
 };
 

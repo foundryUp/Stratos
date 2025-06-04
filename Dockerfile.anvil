@@ -1,0 +1,22 @@
+# Use the official Foundry image
+FROM ghcr.io/foundry-rs/foundry:latest
+
+# Set environment variables for Anvil
+ENV ANVIL_IP_ADDR=0.0.0.0
+ENV FOUNDRY_DISABLE_NIGHTLY_WARNING=true
+
+# Create app directory
+WORKDIR /app
+
+# Copy configuration files if any
+COPY . .
+
+# Expose the default Anvil port
+EXPOSE 8545
+
+# Health check (using a simple TCP check instead of curl)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD timeout 5s bash -c 'echo > /dev/tcp/localhost/8545' || exit 1
+
+# Start Anvil with mainnet fork
+CMD ["anvil", "--fork-url", "https://eth-mainnet.g.alchemy.com/v2/KywLaq2zlVzePOhip0BY3U8ztfHkYDmo", "--chain-id", "31337"] 
