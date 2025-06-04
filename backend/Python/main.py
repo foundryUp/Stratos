@@ -10,107 +10,129 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# Server configurations - updated to use server.py
-SERVER_CONFIGS = {
-    "weth_usdc": {"port": 5050, "script": "servers/weth_usdc/server.py"},
-    "wbtc_usdc": {"port": 5051, "script": "servers/wbtc_usdc/server.py"},
-    "dai_usdc": {"port": 5052, "script": "servers/dai_usdc/server.py"}
-}
+# Import algorithm functions directly for cloud deployment
+sys.path.append(os.path.join(os.path.dirname(__file__), 'Algorithms'))
+from RSI import calculate_rsi_with_signals
+from MACD import calculate_macd_with_signals  
+from MA import calculate_ma_with_signals
+from DCA import calculate_dca_with_signals
 
-# Store server processes
-server_processes = {}
+sys.path.append(os.path.join(os.path.dirname(__file__), 'SubGraph'))
+from weth_usdc_subgraph import fetch_weth_usdc_data
+from wbtc_usdc_subgraph import fetch_wbtc_usdc_data
+from dai_usdc_subgraph import fetch_dai_usdc_data
 
-# Algorithm mapping for reference
+# Algorithm mapping
 ALGORITHM_MAP = {
-    "short_high": "RSI",     # SHORT TERM HIGH RISK
-    "long_high": "MACD",     # LONG TERM HIGH RISK
-    "short_low": "MA",       # SHORT TERM LOW RISK
-    "long_low": "DCA"        # LONG TERM LOW RISK
+    "short_high": "RSI",
+    "long_high": "MACD", 
+    "short_low": "MA",
+    "long_low": "DCA"
 }
 
-def start_server(pair_name, config):
-    """Start a token pair server"""
+ALGORITHM_FUNCTIONS = {
+    "RSI": calculate_rsi_with_signals,
+    "MACD": calculate_macd_with_signals,
+    "MA": calculate_ma_with_signals,
+    "DCA": calculate_dca_with_signals
+}
+
+# Data fetching functions
+DATA_FETCHERS = {
+    "weth_usdc": fetch_weth_usdc_data,
+    "wbtc_usdc": fetch_wbtc_usdc_data,
+    "dai_usdc": fetch_dai_usdc_data
+}
+
+def get_formatted_data(pair):
+    """Get formatted price data for a trading pair"""
     try:
-        process = subprocess.Popen([
-            sys.executable, config["script"]
-        ], cwd=os.getcwd())
-        server_processes[pair_name] = process
-        time.sleep(2)  # Give server time to start
-        print(f"✅ Started {pair_name} server on port {config['port']}")
-        return True
+        fetcher = DATA_FETCHERS.get(pair)
+        if not fetcher:
+            return {"error": f"No data fetcher for pair: {pair}"}
+            
+        data = fetcher()
+        if "error" in data:
+            return data
+            
+        # Convert to float and sort by timestamp
+        prices = []
+        for swap in data.get("swaps", []):
+            try:
+                if pair == "dai_usdc":
+                    # For DAI/USDC, price is amount1 / amount0 (USDC per DAI)
+                    price = float(swap["amount1"]) / float(swap["amount0"])
+                else:
+                    # For other pairs, price is amount0 / amount1 
+                    price = float(swap["amount0"]) / abs(float(swap["amount1"]))
+                prices.append(price)
+            except (ValueError, ZeroDivisionError):
+                continue
+                
+        return {"prices": prices, "total_swaps": len(prices)}
+        
     except Exception as e:
-        print(f"❌ Failed to start {pair_name} server: {e}")
-        return False
+        return {"error": f"Failed to fetch data for {pair}: {str(e)}"}
 
-def stop_server(pair_name):
-    """Stop a token pair server"""
-    if pair_name in server_processes:
-        try:
-            server_processes[pair_name].terminate()
-            server_processes[pair_name].wait(timeout=5)
-            del server_processes[pair_name]
-            print(f"🛑 Stopped {pair_name} server")
-            return True
-        except Exception as e:
-            print(f"❌ Error stopping {pair_name} server: {e}")
-            return False
-    return False
-
-def check_server_health(pair_name, port):
-    """Check if a server is healthy"""
+def determine_confidence(algorithm, algo_data):
+    """Determine confidence level based on algorithm-specific metrics"""
     try:
-        response = requests.get(f"http://localhost:{port}/health", timeout=2)
-        return response.status_code == 200
-    except:
-        return False
-
-def start_all_servers():
-    """Start all token pair servers"""
-    print("🚀 Starting all token pair servers...")
-    for pair_name, config in SERVER_CONFIGS.items():
-        start_server(pair_name, config)
-
-def stop_all_servers():
-    """Stop all token pair servers"""
-    print("🛑 Stopping all servers...")
-    for pair_name in list(server_processes.keys()):
-        stop_server(pair_name)
-
-def signal_handler(sig, frame):
-    """Handle shutdown signals"""
-    print("\n📴 Shutting down...")
-    stop_all_servers()
-    sys.exit(0)
-
-# Register signal handlers
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
+        if algorithm == "RSI":
+            rsi_value = algo_data.get("latest_rsi", 50)
+            if rsi_value <= 20 or rsi_value >= 80:
+                return "HIGH"
+            elif rsi_value <= 35 or rsi_value >= 65:
+                return "MEDIUM"
+            else:
+                return "LOW"
+                
+        elif algorithm == "MACD":
+            histogram = algo_data.get("latest_histogram", 0)
+            if abs(histogram) > 0.1:
+                return "HIGH"
+            elif abs(histogram) > 0.05:
+                return "MEDIUM"
+            else:
+                return "LOW"
+                
+        elif algorithm == "MA":
+            short_ma = algo_data.get("latest_short_ma", 0)
+            long_ma = algo_data.get("latest_long_ma", 0)
+            if long_ma != 0:
+                diff_pct = abs((short_ma - long_ma) / long_ma)
+                if diff_pct > 0.02:
+                    return "HIGH"
+                elif diff_pct > 0.01:
+                    return "MEDIUM"
+                else:
+                    return "LOW"
+            return "LOW"
+            
+        elif algorithm == "DCA":
+            return "MEDIUM"
+            
+        return "MEDIUM"
+        
+    except Exception:
+        return "MEDIUM"
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check for the routing server"""
-    server_statuses = {}
-    for pair_name, config in SERVER_CONFIGS.items():
-        server_statuses[pair_name] = {
-            "healthy": check_server_health(pair_name, config["port"]),
-            "port": config["port"]
-        }
-    
+    """Health check endpoint"""
     return jsonify({
-        "routing_server": "healthy",
-        "servers": server_statuses,
-        "algorithms": ALGORITHM_MAP
+        "status": "healthy",
+        "algorithms": ALGORITHM_MAP,
+        "supported_pairs": list(DATA_FETCHERS.keys())
     })
 
 @app.route('/pairs', methods=['GET'])
 def get_pairs():
     """Get list of available trading pairs"""
     return jsonify({
-        "pairs": list(SERVER_CONFIGS.keys()),
+        "pairs": list(DATA_FETCHERS.keys()),
         "algorithms": ALGORITHM_MAP,
         "endpoints": {
-            "new_format": "/decisions/{pair}/{term}/{risk}",
-            "legacy_format": "/decisions/{pair}/high"
+            "format": "/decisions/{pair}/{term}/{risk}"
         }
     })
 
@@ -130,106 +152,86 @@ def get_pair_decision_with_algorithm(pair, term, risk):
       short + low = MA
       long + low = DCA
     """
-    if pair not in SERVER_CONFIGS:
-        return jsonify({"error": f"Pair '{pair}' not supported. Available pairs: {list(SERVER_CONFIGS.keys())}"}), 400
-    
-    config = SERVER_CONFIGS[pair]
-    
-    # Check if server is healthy
-    if not check_server_health(pair, config["port"]):
-        return jsonify({"error": f"Server for {pair} is not available"}), 503
-    
     try:
-        # Forward request to the specific pair server
-        response = requests.get(
-            f"http://localhost:{config['port']}/decisions/{term}/{risk}",
-            timeout=10
-        )
+        # Validate parameters
+        if pair not in DATA_FETCHERS:
+            return jsonify({"error": f"Pair '{pair}' not supported. Available pairs: {list(DATA_FETCHERS.keys())}"}), 400
         
-        if response.status_code == 200:
-            return response.json()
-        else:
-            return jsonify({"error": f"Server returned status {response.status_code}"}), response.status_code
-            
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": f"Failed to connect to {pair} server: {str(e)}"}), 503
+        if term not in ['short', 'long']:
+            return jsonify({"error": "Term must be 'short' or 'long'"}), 400
+        if risk not in ['high', 'low']:
+            return jsonify({"error": "Risk must be 'high' or 'low'"}), 400
+        
+        # Get algorithm for this combination
+        combo_key = f"{term}_{risk}"
+        algorithm = ALGORITHM_MAP.get(combo_key)
+        
+        if not algorithm:
+            return jsonify({"error": f"No algorithm found for {term} term {risk} risk"}), 400
+        
+        # Get formatted data
+        data = get_formatted_data(pair)
+        
+        if "error" in data:
+            return jsonify(data), 500
+        
+        prices = data["prices"]
+        
+        if len(prices) < 14:
+            return jsonify({"error": f"Insufficient data for {algorithm} calculation. Got {len(prices)} prices, need at least 14"}), 400
+        
+        # Calculate using the appropriate algorithm
+        algo_function = ALGORITHM_FUNCTIONS[algorithm]
+        algo_data = algo_function(prices)
+        
+        if "error" in algo_data:
+            return jsonify({"error": algo_data["error"]}), 500
+        
+        # Get the latest signal
+        latest_signal = algo_data.get("latest_trading_signal") or algo_data.get("latest_signal", "HOLD")
+        
+        # Determine confidence level
+        confidence = determine_confidence(algorithm, algo_data)
+        
+        return jsonify({
+            "pair": pair,
+            "algorithm": algorithm,
+            "term": term,
+            "risk": risk,
+            "decision": {
+                "signal": latest_signal,
+                "confidence": confidence
+            },
+            "algorithm_data": algo_data,
+            "data_points": len(prices),
+            "timestamp": time.time()
+        })
+        
+    except Exception as e:
+        return jsonify({"error": f"Calculation failed: {str(e)}"}), 500
 
+# Legacy endpoints for backward compatibility
 @app.route('/decisions/<pair>/high', methods=['GET'])
 def get_pair_decision_legacy(pair):
-    """
-    Legacy endpoint - defaults to short term high risk (RSI)
-    Maintains backward compatibility
-    """
+    """Legacy endpoint - defaults to short term high risk (RSI)"""
     return get_pair_decision_with_algorithm(pair, 'short', 'high')
 
-# Additional legacy endpoint for the original format
 @app.route('/decisions/high', methods=['GET'])
 def get_high_frequency_decision_legacy():
-    """
-    Original legacy endpoint - defaults to WETH/USDC short term high risk (RSI)
-    """
+    """Original legacy endpoint - defaults to WETH/USDC short term high risk (RSI)"""
     return get_pair_decision_with_algorithm('weth_usdc', 'short', 'high')
 
-@app.route('/servers/start/<pair>', methods=['POST'])
-def start_specific_server(pair):
-    """Start a specific server"""
-    if pair not in SERVER_CONFIGS:
-        return jsonify({"error": f"Unknown pair: {pair}"}), 400
-    
-    if start_server(pair, SERVER_CONFIGS[pair]):
-        return jsonify({"message": f"Started {pair} server"})
-    else:
-        return jsonify({"error": f"Failed to start {pair} server"}), 500
-
-@app.route('/servers/stop/<pair>', methods=['POST'])  
-def stop_specific_server(pair):
-    """Stop a specific server"""
-    if pair not in SERVER_CONFIGS:
-        return jsonify({"error": f"Unknown pair: {pair}"}), 400
-    
-    if stop_server(pair):
-        return jsonify({"message": f"Stopped {pair} server"})
-    else:
-        return jsonify({"error": f"Failed to stop {pair} server"}), 500
-
-@app.route('/servers/restart/<pair>', methods=['POST'])
-def restart_specific_server(pair):
-    """Restart a specific server"""
-    if pair not in SERVER_CONFIGS:
-        return jsonify({"error": f"Unknown pair: {pair}"}), 400
-    
-    stop_server(pair)
-    time.sleep(1)
-    if start_server(pair, SERVER_CONFIGS[pair]):
-        return jsonify({"message": f"Restarted {pair} server"})
-    else:
-        return jsonify({"error": f"Failed to restart {pair} server"}), 500
-
 if __name__ == '__main__':
-    try:
-        # Start all servers
-        start_all_servers()
-        
-        print("🎯 Main routing server starting on port 5049...")
-        print(f"📊 Available pairs: {list(SERVER_CONFIGS.keys())}")
-        print(f"🧠 Algorithm mapping: {ALGORITHM_MAP}")
-        print("🔗 New endpoints:")
-        print("   GET /decisions/{pair}/{term}/{risk} - Algorithm-specific decisions")
-        print("   Examples:")
-        print("     /decisions/weth_usdc/short/high  -> RSI")
-        print("     /decisions/weth_usdc/long/high   -> MACD")
-        print("     /decisions/weth_usdc/short/low   -> MA")
-        print("     /decisions/weth_usdc/long/low    -> DCA")
-        print("🔗 Legacy endpoints:")
-        print("   GET /decisions/{pair}/high - Defaults to RSI")
-        print("   GET /decisions/high - Defaults to WETH/USDC RSI")
-        print("🔗 Management endpoints:")
-        print("   GET /health - Server status")
-        print("   GET /pairs - Available pairs and algorithms")
-        
-        app.run(host='0.0.0.0', port=5049, debug=False)
-        
-    except KeyboardInterrupt:
-        print("\n📴 Shutting down...")
-    finally:
-        stop_all_servers()
+    # For local development, use port 5049
+    # For cloud deployment, use environment PORT variable
+    port = int(os.environ.get('PORT', 5049))
+    
+    print("🎯 Unified trading server starting...")
+    print(f"📊 Available pairs: {list(DATA_FETCHERS.keys())}")
+    print(f"🧠 Algorithm mapping: {ALGORITHM_MAP}")
+    print("🔗 Endpoints:")
+    print("   GET /decisions/{pair}/{term}/{risk} - Algorithm-specific decisions")
+    print("   GET /health - Server status")
+    print("   GET /pairs - Available pairs and algorithms")
+    
+    app.run(host='0.0.0.0', port=port, debug=False)

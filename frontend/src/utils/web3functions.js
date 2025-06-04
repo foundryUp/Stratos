@@ -640,19 +640,12 @@ export const getTradingSignals = async (pair, term, riskLevel) => {
   try {
     console.log(`Fetching trading signals from Python backend: ${pair} ${term} ${riskLevel}`);
     
-    // Map frontend pair names to backend endpoints
-    const pairMapping = {
-      'weth_usdc': 'http://localhost:5050',
-      'wbtc_usdc': 'http://localhost:5051', 
-      'dai_usdc': 'http://localhost:5052'
-    };
+    // Use environment variable for backend URL, fallback to localhost for development
+    const PYTHON_BACKEND_URL = process.env.REACT_APP_PYTHON_BACKEND_URL || 'http://localhost:5049';
     
-    const baseUrl = pairMapping[pair];
-    if (!baseUrl) {
-      throw new Error(`Unsupported trading pair: ${pair}`);
-    }
-    
-    const url = `${baseUrl}/decisions/${term}/${riskLevel}`;
+    // For production, we use a single unified backend
+    // For development, we can still use individual servers or the unified one
+    const url = `${PYTHON_BACKEND_URL}/decisions/${pair}/${term}/${riskLevel}`;
     console.log(`Making request to: ${url}`);
     
     const response = await fetch(url, {

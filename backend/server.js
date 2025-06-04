@@ -105,24 +105,11 @@ app.post("/api/tradingchat", async (req, res) => {
         if (parts.length === 4) {
           const [, pair, term, risk] = parts;
           try {
-            // Map pair names to port numbers
-            const portMap = {
-              'weth_usdc': 5050,
-              'wbtc_usdc': 5051,
-              'dai_usdc': 5052
-            };
-            
-            const port = portMap[pair];
-            if (!port) {
-              return res.json({ 
-                response: JSON.stringify({ 
-                  message: `Unsupported trading pair: ${pair}. Available pairs: weth_usdc, wbtc_usdc, dai_usdc` 
-                }) 
-              });
-            }
+            // Use environment variable for Python backend URL, fallback to localhost for development
+            const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL || 'http://localhost:5049';
 
-            // Fetch signal from Python backend
-            const pythonResponse = await fetch(`http://localhost:${port}/decisions/${term}/${risk}`);
+            // Fetch signal from Python backend using unified endpoint
+            const pythonResponse = await fetch(`${PYTHON_BACKEND_URL}/decisions/${pair}/${term}/${risk}`);
             if (!pythonResponse.ok) {
               throw new Error(`Python backend error: ${pythonResponse.status}`);
             }
@@ -167,35 +154,22 @@ app.post("/api/tradingchat", async (req, res) => {
             });
           } else {
             // Market analysis for specific pair
-            const portMap = {
-              'weth_usdc': 5050,
-              'wbtc_usdc': 5051,
-              'dai_usdc': 5052
-            };
+            const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL || 'http://localhost:5049';
             
-            const port = portMap[target];
-            if (port) {
-              try {
-                const pythonResponse = await fetch(`http://localhost:${port}/pool/info`);
-                if (pythonResponse.ok) {
-                  const poolData = await pythonResponse.json();
-                  return res.json({ 
-                    response: JSON.stringify({ 
-                      analysis: poolData,
-                      message: `Here's the current market analysis for ${target.toUpperCase().replace('_', '/')}:`
-                    }) 
-                  });
-                }
-              } catch (error) {
-                console.error("Error fetching pool data:", error);
+            try {
+              const pythonResponse = await fetch(`${PYTHON_BACKEND_URL}/health`);
+              if (pythonResponse.ok) {
+                const healthData = await pythonResponse.json();
+                return res.json({ 
+                  response: JSON.stringify({ 
+                    analysis: healthData,
+                    message: `Here's the current system status for trading algorithms:`
+                  }) 
+                });
               }
+            } catch (error) {
+              console.error("Error fetching system data:", error);
             }
-            
-            return res.json({ 
-              response: JSON.stringify({ 
-                message: `Market analysis for ${target} is currently unavailable.` 
-              }) 
-            });
           }
         }
       }

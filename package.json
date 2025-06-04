@@ -1,9 +1,34 @@
 {
+  "name": "stratos-backend",
+  "version": "1.0.0",
+  "description": "Backend server for Stratos AI Quant Trading Platform",
+  "main": "server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js",
+    "build": "echo 'No build step required'",
+    "test": "echo 'No tests specified'"
+  },
   "dependencies": {
-    "@ai-sdk/groq": "^1.2.9",
-    "web3": "^4.16.0"
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "node-fetch": "^2.6.12",
+    "openai": "^4.20.0"
   },
   "devDependencies": {
-    "@chainlink/contracts-ccip": "^1.5.0"
-  }
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "keywords": [
+    "trading",
+    "defi",
+    "blockchain",
+    "ai",
+    "backend"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
 }
