@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   anvil:
-    image: ghcr.io/foundry-rs/foundry:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.anvil
     container_name: anvil
     environment:
       ANVIL_IP_ADDR: "0.0.0.0"
@@ -10,10 +12,9 @@ services:
     working_dir: /anvil
     ports:
       - "8545:8545"
-    command: anvil --fork-url https://eth-mainnet.g.alchemy.com/v2/KywLaq2zlVzePOhip0BY3U8ztfHkYDmo --chain-id 31337
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8545", "-X", "POST", "-H", "Content-Type: application/json", "-d", "{\"jsonrpc\":\"2.0\",\"method\":\"eth_blockNumber\",\"params\":[],\"id\":1}"]
+      test: ["CMD", "curl", "-f", "http://localhost:8545", "-X", "POST", "-H", "Content-Type: application/json", "-d", "{\"jsonrpc\":\"2.0\",\"method\":\"eth_chainId\",\"params\":[],\"id\":1}"]
       interval: 30s
       timeout: 10s
       retries: 3

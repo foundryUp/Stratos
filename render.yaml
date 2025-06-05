@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: anvil-node
+    env: docker
+    dockerfilePath: ./Dockerfile.anvil
+    plan: free
+    region: oregon
+    healthCheckPath: /
+    envVars:
+      - key: ANVIL_IP_ADDR
+        value: "0.0.0.0"
+      - key: FOUNDRY_DISABLE_NIGHTLY_WARNING
+        value: "true"
+      - key: FORK_URL
+        value: "https://eth-mainnet.g.alchemy.com/v2/KywLaq2zlVzePOhip0BY3U8ztfHkYDmo"
+      - key: CHAIN_ID
+        value: "1"
+      - key: PORT
+        value: "8545" 

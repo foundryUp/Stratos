@@ -18,5 +18,5 @@ EXPOSE 8545
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD timeout 5s bash -c 'echo > /dev/tcp/localhost/8545' || exit 1
 
-# Start Anvil with mainnet fork
-CMD ["anvil","--fork-url", "https://eth-mainnet.g.alchemy.com/v2/KywLaq2zlVzePOhip0BY3U8ztfHkYDmo","--fork-chain-id", "1","--host", "0.0.0.0","--port", "8545"]
+# Use ENTRYPOINT to ensure the full command executes with chain ID 1
+ENTRYPOINT ["anvil", "--fork-url", "https://eth-mainnet.g.alchemy.com/v2/KywLaq2zlVzePOhip0BY3U8ztfHkYDmo", "--chain-id", "1"]
