@@ -1,7 +1,7 @@
 // Contract addresses from local Anvil deployment
-export const TradingEngineAddress = process.env.REACT_APP_TRADE_CONTRACT_ADDRESS || "0x244dE6b06E7087110b94Cde88A42d9aBA17efa52";
-export const AAVE_Interactor_Contract = process.env.REACT_APP_AAVE_CONTRACT_ADDRESS || "0xa7E99C1df635d13d61F7c81eCe571cc952E64526";
-export const SEND_SWAP_CONTRACT = process.env.REACT_APP_SEND_SWAP_CONTRACT_ADDRESS || "0x7c28FC9709650D49c8d0aED2f6ece6b191F192a9";
+export const TradingEngineAddress = process.env.REACT_APP_TRADE_CONTRACT_ADDRESS || "0xF754F420227f4E32cC3335f8e90F4777C7E1Fbcc";
+export const AAVE_Interactor_Contract = process.env.REACT_APP_AAVE_CONTRACT_ADDRESS || "0x159c01E09A23B6065748B2CAeB76f9dfB34A74Ae";
+export const SEND_SWAP_CONTRACT = process.env.REACT_APP_SEND_SWAP_CONTRACT_ADDRESS || "0xBD5DaF70AB4aE609Fd01772aa3E53a073040D119";
 
 export const ERC20ABI = [
   {
