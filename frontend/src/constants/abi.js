@@ -1,8 +1,8 @@
 // Contract addresses from environment variables
 // These will be set in Vercel after deploying contracts
-export const TradeContractAddress = process.env.REACT_APP_TRADE_CONTRACT_ADDRESS || "0x7c28FC9709650D49c8d0aED2f6ece6b191F192a9";
-export const AAVE_Interactor_Contract = process.env.REACT_APP_AAVE_CONTRACT_ADDRESS || "0x244dE6b06E7087110b94Cde88A42d9aBA17efa52";
-export const SEND_SWAP_CONTRACT = process.env.REACT_APP_SEND_SWAP_CONTRACT_ADDRESS || "0xa7E99C1df635d13d61F7c81eCe571cc952E64526";
+export const TradeContractAddress = process.env.REACT_APP_TRADE_CONTRACT_ADDRESS || "0x37692DFD92BA53f447f37D916B23187D7CE40405";
+export const AAVE_Interactor_Contract = process.env.REACT_APP_AAVE_CONTRACT_ADDRESS || "0x9D40c21ff3BD14d671BB7c00Dcc1aDD0a4C9Bd41";
+export const SEND_SWAP_CONTRACT = process.env.REACT_APP_SEND_SWAP_CONTRACT_ADDRESS || "0x876D514e8dEA31fBd5AE8b5847c22A8Dff6511D5";
 
 export const ERC20ABI = [
   {
@@ -28,16 +28,28 @@ export const ERC20ABI = [
   }
 ];
 
+// Updated TradingEngine ABI from compiled contract
 export const TradeABI = [
-  {"type":"fallback","stateMutability":"payable"},
-  {"type":"receive","stateMutability":"payable"},
-  {"type":"function","name":"commandToTrade","inputs":[{"name":"intent","type":"string","internalType":"string"}],"outputs":[{"name":"amount","type":"uint256","internalType":"uint256"},{"name":"protocol","type":"string","internalType":"string"}],"stateMutability":"nonpayable"},
-  {"type":"function","name":"getAddressFromString","inputs":[{"name":"tokenName","type":"string","internalType":"string"}],"outputs":[{"name":"","type":"address","internalType":"address"}],"stateMutability":"view"},
-  {"type":"function","name":"returnIntentValues","inputs":[{"name":"intent","type":"string","internalType":"string"}],"outputs":[{"name":"","type":"address","internalType":"address"},{"name":"","type":"address","internalType":"address"},{"name":"amount","type":"uint256","internalType":"uint256"},{"name":"protocol","type":"string","internalType":"string"}],"stateMutability":"view"},
-  {"type":"error","name":"InvalidCharacter","inputs":[]},
-  {"type":"error","name":"InvalidSyntax","inputs":[]}
+  {"type":"constructor","inputs":[],"stateMutability":"nonpayable"},
+  {"type":"function","name":"UNISWAP_V2_ROUTER","inputs":[],"outputs":[{"name":"","type":"address","internalType":"address"}],"stateMutability":"view"},
+  {"type":"function","name":"USDC","inputs":[],"outputs":[{"name":"","type":"address","internalType":"address"}],"stateMutability":"view"},
+  {"type":"function","name":"WETH","inputs":[],"outputs":[{"name":"","type":"address","internalType":"address"}],"stateMutability":"view"},
+  {"type":"function","name":"buyToken","inputs":[{"name":"tokenSymbol","type":"string","internalType":"string"},{"name":"amountIn","type":"uint256","internalType":"uint256"},{"name":"minAmountOut","type":"uint256","internalType":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},
+  {"type":"function","name":"emergencyWithdraw","inputs":[{"name":"token","type":"address","internalType":"address"},{"name":"amount","type":"uint256","internalType":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},
+  {"type":"function","name":"getExpectedOutput","inputs":[{"name":"tokenSymbol","type":"string","internalType":"string"},{"name":"amountIn","type":"uint256","internalType":"uint256"},{"name":"isBuy","type":"bool","internalType":"bool"}],"outputs":[{"name":"","type":"uint256","internalType":"uint256"}],"stateMutability":"view"},
+  {"type":"function","name":"getTokenAddress","inputs":[{"name":"symbol","type":"string","internalType":"string"}],"outputs":[{"name":"","type":"address","internalType":"address"}],"stateMutability":"view"},
+  {"type":"function","name":"sellToken","inputs":[{"name":"tokenSymbol","type":"string","internalType":"string"},{"name":"amountIn","type":"uint256","internalType":"uint256"},{"name":"minAmountOut","type":"uint256","internalType":"uint256"}],"outputs":[],"stateMutability":"nonpayable"},
+  {"type":"function","name":"tokenRegistry","inputs":[{"name":"","type":"string","internalType":"string"}],"outputs":[{"name":"","type":"address","internalType":"address"}],"stateMutability":"view"},
+  {"type":"function","name":"updateTokenRegistry","inputs":[{"name":"symbol","type":"string","internalType":"string"},{"name":"tokenAddress","type":"address","internalType":"address"}],"outputs":[],"stateMutability":"nonpayable"},
+  {"type":"event","name":"TradeExecuted","inputs":[{"name":"user","type":"address","indexed":true,"internalType":"address"},{"name":"tokenIn","type":"address","indexed":true,"internalType":"address"},{"name":"tokenOut","type":"address","indexed":true,"internalType":"address"},{"name":"amountIn","type":"uint256","indexed":false,"internalType":"uint256"},{"name":"amountOut","type":"uint256","indexed":false,"internalType":"uint256"},{"name":"tradeType","type":"string","indexed":false,"internalType":"string"}],"anonymous":false},
+  {"type":"error","name":"InvalidAmount","inputs":[]},
+  {"type":"error","name":"Reentrancy","inputs":[]},
+  {"type":"error","name":"SlippageTooHigh","inputs":[]},
+  {"type":"error","name":"TransferFailed","inputs":[]},
+  {"type":"error","name":"UnsupportedToken","inputs":[]}
 ];
 
+// Updated AaveV3Interactor ABI from compiled contract
 export const AAVE_ABI = [
   {"type":"constructor","inputs":[],"stateMutability":"nonpayable"},
   {"type":"function","name":"borrow","inputs":[{"name":"asset","type":"address","internalType":"address"},{"name":"amount","type":"uint256","internalType":"uint256"},{"name":"interestRateMode","type":"uint256","internalType":"uint256"},{"name":"user","type":"address","internalType":"address"}],"outputs":[],"stateMutability":"nonpayable"},
@@ -49,6 +61,7 @@ export const AAVE_ABI = [
   {"type":"function","name":"withdraw","inputs":[{"name":"asset","type":"address","internalType":"address"},{"name":"amount","type":"uint256","internalType":"uint256"},{"name":"user","type":"address","internalType":"address"}],"outputs":[],"stateMutability":"nonpayable"}
 ];
 
+// Updated SimpleIE (Send/Swap) ABI from compiled contract
 export const SEND_SWAP_ABI = [
   {"type":"fallback","stateMutability":"payable"},
   {"type":"receive","stateMutability":"payable"},
@@ -63,4 +76,4 @@ export const SEND_SWAP_ABI = [
   {"type":"error","name":"InvalidSwap","inputs":[]},
   {"type":"error","name":"InvalidSyntax","inputs":[]},
   {"type":"error","name":"Overflow","inputs":[]}
-]
+];
