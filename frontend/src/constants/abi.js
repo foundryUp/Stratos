@@ -1,5 +1,4 @@
 // Contract addresses from local Anvil deployment
-// Updated with actual deployed addresses from DEPLOYMENT_SUMMARY.md
 export const TradingEngineAddress = process.env.REACT_APP_TRADE_CONTRACT_ADDRESS;
 export const AAVE_Interactor_Contract = process.env.REACT_APP_AAVE_CONTRACT_ADDRESS ;
 export const SEND_SWAP_CONTRACT = process.env.REACT_APP_SEND_SWAP_CONTRACT_ADDRESS ;
