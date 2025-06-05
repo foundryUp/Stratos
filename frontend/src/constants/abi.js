@@ -1,6 +1,6 @@
-// Contract addresses from environment variables
-// These will be set in Vercel after deploying contracts
-export const TradeContractAddress = process.env.REACT_APP_TRADE_CONTRACT_ADDRESS || "0x37692DFD92BA53f447f37D916B23187D7CE40405";
+// Contract addresses from local Anvil deployment
+// Updated with actual deployed addresses from DEPLOYMENT_SUMMARY.md
+export const TradingEngineAddress = process.env.REACT_APP_TRADE_CONTRACT_ADDRESS || "0x37692DFD92BA53f447f37D916B23187D7CE40405";
 export const AAVE_Interactor_Contract = process.env.REACT_APP_AAVE_CONTRACT_ADDRESS || "0x9D40c21ff3BD14d671BB7c00Dcc1aDD0a4C9Bd41";
 export const SEND_SWAP_CONTRACT = process.env.REACT_APP_SEND_SWAP_CONTRACT_ADDRESS || "0x876D514e8dEA31fBd5AE8b5847c22A8Dff6511D5";
 
@@ -28,8 +28,8 @@ export const ERC20ABI = [
   }
 ];
 
-// Updated TradingEngine ABI from compiled contract
-export const TradeABI = [
+// TradingEngine ABI - Updated from compiled contract
+export const TradingEngineABI = [
   {"type":"constructor","inputs":[],"stateMutability":"nonpayable"},
   {"type":"function","name":"UNISWAP_V2_ROUTER","inputs":[],"outputs":[{"name":"","type":"address","internalType":"address"}],"stateMutability":"view"},
   {"type":"function","name":"USDC","inputs":[],"outputs":[{"name":"","type":"address","internalType":"address"}],"stateMutability":"view"},

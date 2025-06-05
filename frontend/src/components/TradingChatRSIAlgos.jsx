@@ -7,8 +7,10 @@ import {
   connectWallet as connectToWallet, 
   fetchTokenBalances,
   getTradingSignals,
-  executeTrade
+  executeTrade,
+  approveTokenForTrading
 } from '../utils/web3functions';
+import { verifyContracts, testTradingContract } from '../utils/contractVerification';
 
 // Mapping from token symbols to their contract addresses
 const tokenAddresses = {
@@ -33,6 +35,7 @@ function IntentTradingAlgo() {
   const [errorMessage, setErrorMessage] = useState('');
   const [inputAmounts, setInputAmounts] = useState({});
   const [isTrading, setIsTrading] = useState(false);
+  const [contractStatus, setContractStatus] = useState(null);
 
   const navigate = useNavigate();
 
@@ -215,9 +218,35 @@ function IntentTradingAlgo() {
     setIsTrading(true);
     setErrorMessage('');
     
-      try {
+    try {
       console.log(`Executing ${decision.action} for ${token} with amount: ${amount}`);
       
+      // Define token addresses
+      const TOKEN_ADDRESSES = {
+        'WETH': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+        'USDC': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+        'WBTC': '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
+        'DAI': '0x6B175474E89094C44Da98b954EedeAC495271d0F'
+      };
+      
+      // Step 1: Approve tokens first
+      setErrorMessage('⏳ Approving tokens for trading...');
+      
+      if (decision.action.toLowerCase() === 'buy') {
+        // For buying, we need to approve USDC
+        await approveTokenForTrading(TOKEN_ADDRESSES.USDC, amount);
+      } else {
+        // For selling, we need to approve the token being sold
+        const tokenAddress = TOKEN_ADDRESSES[token];
+        if (!tokenAddress) {
+          throw new Error(`Unsupported token: ${token}`);
+        }
+        await approveTokenForTrading(tokenAddress, amount);
+      }
+      
+      setErrorMessage('⏳ Executing trade...');
+      
+      // Step 2: Execute the trade
       const tx = await executeTrade(decision.action, token, amount);
       
       console.log("Trade execution result:", tx);
@@ -238,6 +267,34 @@ function IntentTradingAlgo() {
       setErrorMessage(`❌ Trade failed: ${error.message}`);
     } finally {
       setIsTrading(false);
+    }
+  };
+
+  // Verify contract deployments
+  const handleVerifyContracts = async () => {
+    setErrorMessage('🔍 Verifying contract deployments...');
+    try {
+      const result = await verifyContracts();
+      setContractStatus(result);
+      
+      if (result.success) {
+        setErrorMessage('✅ All contracts verified successfully!');
+        
+        // Test trading contract functionality if wallet is connected
+        if (walletConnected) {
+          const testResult = await testTradingContract(walletAddress);
+          if (testResult.success) {
+            setErrorMessage('✅ All contracts verified and functional!');
+          } else {
+            setErrorMessage(`⚠️ Contracts verified but functionality test failed: ${testResult.error}`);
+          }
+        }
+      } else {
+        setErrorMessage(`❌ Contract verification failed: ${result.error}`);
+      }
+    } catch (error) {
+      setErrorMessage(`❌ Verification error: ${error.message}`);
+      setContractStatus({ success: false, error: error.message });
     }
   };
 
@@ -274,14 +331,22 @@ function IntentTradingAlgo() {
           </div>
         )}
 
-        {/* Generate Signals Section */}
-        <div className="flex flex-col items-center">
-          <button
-            onClick={generateSignals}
-            className="flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30 transition-all"
-          >
-            {loadingSignals ? 'Generating...' : 'Generate Trading Signals'}
-          </button>
+        {/* Contract Verification and Generate Signals Section */}
+        <div className="flex flex-col items-center space-y-4">
+          <div className="flex gap-4">
+            <button
+              onClick={handleVerifyContracts}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600/30 transition-all"
+            >
+              🔍 Verify Contracts
+            </button>
+            <button
+              onClick={generateSignals}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30 transition-all"
+            >
+              {loadingSignals ? 'Generating...' : 'Generate Trading Signals'}
+            </button>
+          </div>
           <div className="flex flex-col md:flex-row gap-6 mt-4">
             {/* Risk Level Options */}
             <div className="flex flex-col items-center">

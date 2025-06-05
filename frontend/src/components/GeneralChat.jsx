@@ -9,6 +9,7 @@ import {
   fetchTokenBalances,
   commandToSimpleIE,
 } from "../utils/web3functions";
+import { verifyContracts } from "../utils/contractVerification";
 import config from "../config/config";
 
 const GeneralAI = () => {
@@ -24,6 +25,7 @@ const GeneralAI = () => {
   const [account, setAccount] = useState("");
   const [aiResponse, setAiResponse] = useState("");
   const [balances, setBalances] = useState({});
+  const [contractStatus, setContractStatus] = useState(null);
 
   // Auto-scroll chat container
   useEffect(() => {
@@ -150,6 +152,35 @@ const GeneralAI = () => {
     }
   };
 
+  const handleVerifyContracts = async () => {
+    try {
+      setMessages((prev) => [
+        ...prev,
+        { type: "bot", content: "🔍 Verifying contract deployments..." },
+      ]);
+      
+      const result = await verifyContracts();
+      setContractStatus(result);
+      
+      if (result.success) {
+        setMessages((prev) => [
+          ...prev,
+          { type: "bot", content: "✅ All contracts verified successfully! You can now send tokens and make swaps." },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          { type: "bot", content: `❌ Contract verification failed: ${result.error}. Please check if Anvil is running and contracts are deployed.` },
+        ]);
+      }
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        { type: "bot", content: `❌ Verification error: ${error.message}` },
+      ]);
+    }
+  };
+
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -239,6 +270,16 @@ const GeneralAI = () => {
                       className="flex-grow p-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl text-white font-medium hover:opacity-90 transition-opacity"
                     >
                       Connect Wallet
+                    </button>
+                  </div>
+                )}
+                {account && (
+                  <div className="flex w-full space-x-2">
+                    <button
+                      onClick={handleVerifyContracts}
+                      className="flex-grow p-2 bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl text-white font-medium hover:opacity-90 transition-opacity text-sm"
+                    >
+                      🔍 Verify Contracts
                     </button>
                   </div>
                 )}

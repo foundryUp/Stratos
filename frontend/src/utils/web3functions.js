@@ -1,7 +1,7 @@
 import Web3 from "web3";
 import {
-  TradeABI,
-  TradeContractAddress,
+  TradingEngineABI,
+  TradingEngineAddress,
   ERC20ABI,
   AAVE_Interactor_Contract,
   AAVE_ABI,
@@ -96,29 +96,136 @@ export async function fetchTokenBalances(account) {
  */
 
 /**
- * Sends command to the trade contract - used by Trading Assistant
+ * Execute a trade using the new TradingEngine contract
  */
-export async function commandToTradeStart(aiResponse) {
+export async function executeTrade(action, tokenSymbol, amount, minAmountOut = null) {
   if (!web3 || !currentAccount) {
     throw new Error("Wallet not connected");
   }
-  const tradeContract = new web3.eth.Contract(TradeABI, TradeContractAddress);
+  
+  const tradingContract = new web3.eth.Contract(TradingEngineABI, TradingEngineAddress);
+  
   try {
-    const tradeTx = await tradeContract.methods
-      .commandToTrade(aiResponse)
-      .send({ from: currentAccount });
-    console.log("Trade Transaction Hash:", tradeTx.transactionHash);
+    console.log("🔄 Starting trade execution...");
+    console.log("Action:", action, "Token:", tokenSymbol, "Amount:", amount);
+    
+    // Normalize action to lowercase to handle both "BUY"/"SELL" and "buy"/"sell"
+    const normalizedAction = action.toLowerCase();
+    
+    // Convert amount to proper units
+    let amountInWei;
+    if (normalizedAction === "buy") {
+      // For buying, amount is in USDC (6 decimals)
+      amountInWei = web3.utils.toWei(amount.toString(), "mwei"); // 6 decimals for USDC
+    } else {
+      // For selling, amount is in the token being sold
+      if (tokenSymbol === "USDC") {
+        amountInWei = web3.utils.toWei(amount.toString(), "mwei"); // 6 decimals
+      } else {
+        amountInWei = web3.utils.toWei(amount.toString(), "ether"); // 18 decimals
+      }
+    }
+    
+    console.log("Amount in wei:", amountInWei);
+    
+    // Check if token is supported by the contract
+    let tokenAddress;
+    try {
+      tokenAddress = await tradingContract.methods.getTokenAddress(tokenSymbol).call();
+      console.log("Token address from contract:", tokenAddress);
+    } catch (error) {
+      console.error("Error getting token address:", error);
+      throw new Error(`Failed to get token address for ${tokenSymbol}. Contract may not be deployed properly.`);
+    }
+    
+    if (tokenAddress === "0x0000000000000000000000000000000000000000") {
+      throw new Error(`Token ${tokenSymbol} is not supported by the trading contract`);
+    }
+    
+    // Calculate minimum amount out with 5% slippage if not provided
+    let minAmount = minAmountOut;
+    if (!minAmount) {
+      try {
+        console.log("Calculating expected output...");
+        const expectedOutput = await tradingContract.methods
+          .getExpectedOutput(tokenSymbol, amountInWei, normalizedAction === "buy")
+          .call();
+        console.log("Expected output:", expectedOutput);
+        minAmount = (BigInt(expectedOutput) * BigInt(95) / BigInt(100)).toString();
+        console.log("Minimum amount with 5% slippage:", minAmount);
+      } catch (error) {
+        console.error("Error calculating expected output:", error);
+        console.warn("Using fallback minimum amount due to getExpectedOutput failure");
+        // Use a very low minimum as fallback
+        minAmount = "1";
+      }
+    }
+    
+    console.log("Final trade parameters:");
+    console.log("- Action:", normalizedAction);
+    console.log("- Token:", tokenSymbol);
+    console.log("- Amount in wei:", amountInWei);
+    console.log("- Min amount out:", minAmount);
+    console.log("- From account:", currentAccount);
+    
+    let tradeTx;
+    try {
+      if (normalizedAction === "buy") {
+        console.log("Executing BUY transaction...");
+        tradeTx = await tradingContract.methods
+          .buyToken(tokenSymbol, amountInWei, minAmount)
+          .send({ 
+            from: currentAccount,
+            gas: 500000 // Add explicit gas limit
+          });
+      } else if (normalizedAction === "sell") {
+        console.log("Executing SELL transaction...");
+        tradeTx = await tradingContract.methods
+          .sellToken(tokenSymbol, amountInWei, minAmount)
+          .send({ 
+            from: currentAccount,
+            gas: 500000 // Add explicit gas limit
+          });
+      } else {
+        throw new Error("Invalid action. Use 'buy' or 'sell'");
+      }
+    } catch (tradeError) {
+      console.error("Trade execution failed:", tradeError);
+      // Provide specific error messages based on the error type
+      if (tradeError.message.includes("Parameter decoding error") || tradeError.message.includes("returned values aren't valid")) {
+        throw new Error("Contract interaction failed. Please check if the trading contract is properly deployed on your network.");
+      } else if (tradeError.message.includes("TransactionRevertedWithoutReasonError")) {
+        throw new Error("Transaction reverted. This could be due to insufficient balance, slippage, or contract logic constraints.");
+      }
+      throw tradeError;
+    }
+    
+    console.log("✅ Trade Transaction Hash:", tradeTx.transactionHash);
     return tradeTx;
   } catch (error) {
-    console.error("Error executing trade command:", error);
+    console.error("❌ Error executing trade:", error);
+    
+    // Provide more specific error messages
+    if (error.message.includes("insufficient funds")) {
+      throw new Error("Insufficient funds for this transaction");
+    } else if (error.message.includes("allowance")) {
+      throw new Error("Token allowance insufficient. Please approve tokens first.");
+    } else if (error.message.includes("slippage")) {
+      throw new Error("Trade failed due to slippage. Try again with a higher slippage tolerance.");
+    } else if (error.message.includes("UnsupportedToken")) {
+      throw new Error(`Token ${tokenSymbol} is not supported by the trading contract`);
+    } else if (error.message.includes("InvalidAmount")) {
+      throw new Error("Invalid trade amount. Please check your input.");
+    }
+    
     throw error;
   }
 }
 
 /**
- * Approves token transfer for trading - used by Trading Assistant
+ * Approves token transfer for the TradingEngine contract
  */
-export async function handleTokensApproveTrading(amountToTrade, tokenAddress) {
+export async function approveTokenForTrading(tokenAddress, amount) {
   if (!web3 || !currentAccount) {
     throw new Error("Wallet not connected");
   }
@@ -126,23 +233,49 @@ export async function handleTokensApproveTrading(amountToTrade, tokenAddress) {
   const tokenContract = new web3.eth.Contract(ERC20ABI, tokenAddress);
   
   try {
+    console.log("🔄 Starting token approval...");
+    console.log("Token address:", tokenAddress);
+    console.log("Amount to approve:", amount);
+    console.log("TradingEngine address:", TradingEngineAddress);
+    
     const balance = await tokenContract.methods.balanceOf(currentAccount).call();
-    console.log("Token balance:", balance);
+    console.log("Current token balance:", balance);
     
-    // Make sure amountToTrade is a number, not already in wei
-    const amountInWei = web3.utils.toWei(amountToTrade.toString(), "ether");
-    console.log("Amount to trade in wei:", amountInWei);
-    console.log("Approving tokens...");
+    // Convert amount to proper units based on token
+    let amountInWei;
+    if (tokenAddress === "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48") { // USDC
+      amountInWei = web3.utils.toWei(amount.toString(), "mwei"); // 6 decimals
+    } else {
+      amountInWei = web3.utils.toWei(amount.toString(), "ether"); // 18 decimals
+    }
     
-    // Use the correct amount for approval
+    console.log("Amount to approve in wei:", amountInWei);
+    
+    // Check if user has sufficient balance
+    if (BigInt(balance) < BigInt(amountInWei)) {
+      throw new Error(`Insufficient token balance. You have ${web3.utils.fromWei(balance, tokenAddress === "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" ? "mwei" : "ether")} but need ${amount}`);
+    }
+    
+    console.log("Sending approval transaction...");
+    
     const approveTx = await tokenContract.methods
-      .approve(TradeContractAddress, amountInWei)
-      .send({ from: currentAccount });
+      .approve(TradingEngineAddress, amountInWei)
+      .send({ 
+        from: currentAccount,
+        gas: 100000 // Explicit gas limit for approval
+      });
       
-    console.log("Tokens approved. Tx:", approveTx);
+    console.log("✅ Tokens approved for trading. Tx:", approveTx.transactionHash);
     return true;
   } catch (error) {
-    console.error("Error approving tokens:", error);
+    console.error("❌ Error approving tokens for trading:", error);
+    
+    if (error.message.includes("insufficient funds")) {
+      throw new Error("Insufficient ETH for gas fees");
+    } else if (error.message.includes("balance")) {
+      throw new Error(error.message);
+    }
+    
     throw error;
   }
 }
@@ -196,9 +329,9 @@ export async function commandToSimpleIE(commandFromLLM) {
       }
     }
     
-    // 2. Handle token approvals for swaps (non-ETH only)
-    if (parts[0] === "swap") {
-      const amountEth = parts[1];
+    // 2. Handle token approvals for swaps and sends (non-ETH only)
+    if (parts[0] === "swap" || (parts[0] === "send" && parts[2] !== "eth")) {
+      const amountValue = parts[1];
       const tokenSymbol = parts[2];
 
       // Skip approval if using ETH as input
@@ -222,22 +355,40 @@ export async function commandToSimpleIE(commandFromLLM) {
           throw new Error(`Unsupported token symbol: ${tokenSymbol}. Supported tokens: ${Object.keys(TOKEN_ADDRESSES_SWAP).join(", ")}`);
         }
 
+        // Check user's token balance first
+        const tokenContract = new web3.eth.Contract(ERC20ABI, tokenAddress);
+        const userBalance = await tokenContract.methods.balanceOf(currentAccount).call();
+        
         // Handle decimals for USDC and USDT (6 decimals) vs others (18 decimals)
         const isDecimal6Token = tokenSymbol === "usdc" || tokenSymbol === "usdt";
         const amountToApprove = isDecimal6Token ? 
-          web3.utils.toWei(amountEth, "mwei") :  // 6 decimals
-          web3.utils.toWei(amountEth, "ether");  // 18 decimals
+          web3.utils.toWei(amountValue, "mwei") :  // 6 decimals
+          web3.utils.toWei(amountValue, "ether");  // 18 decimals
         
-        console.log(`🟢 General Assistant - Approving ${amountEth} ${tokenSymbol.toUpperCase()} for SimpleIE contract...`);
-        const token = new web3.eth.Contract(ERC20ABI, tokenAddress);
+        // Check if user has sufficient balance
+        if (BigInt(userBalance) < BigInt(amountToApprove)) {
+          const balanceFormatted = isDecimal6Token ? 
+            web3.utils.fromWei(userBalance, "mwei") :
+            web3.utils.fromWei(userBalance, "ether");
+          throw new Error(`Insufficient ${tokenSymbol.toUpperCase()} balance. You have ${balanceFormatted} but need ${amountValue}`);
+        }
+        
+        console.log(`🟢 General Assistant - Approving ${amountValue} ${tokenSymbol.toUpperCase()} for SimpleIE contract...`);
+        console.log(`🟢 General Assistant - Token balance: ${isDecimal6Token ? web3.utils.fromWei(userBalance, "mwei") : web3.utils.fromWei(userBalance, "ether")}`);
         
         try {
-          await token.methods
+          await tokenContract.methods
             .approve(SEND_SWAP_CONTRACT, amountToApprove)
-            .send({ from: currentAccount });
+            .send({ 
+              from: currentAccount,
+              gas: 100000 // Explicit gas limit
+            });
           console.log(`🟢 General Assistant - ✅ ${tokenSymbol.toUpperCase()} approval successful`);
         } catch (approvalError) {
           console.error(`🟢 General Assistant - Failed to approve ${tokenSymbol.toUpperCase()}:`, approvalError);
+          if (approvalError.message.includes("insufficient funds")) {
+            throw new Error(`Insufficient ETH for gas fees`);
+          }
           throw new Error(`${tokenSymbol.toUpperCase()} approval failed: ${approvalError.message}`);
         }
       }
@@ -473,163 +624,7 @@ export async function getContractOwner() {
   }
 }
 
-/**
- * Trading Engine Functions - Updated for new TradingEngine contract
- */
 
-// TradingEngine contract configuration (update after deployment)
-const TRADING_ENGINE_ADDRESS = "0xfE435387201D3327983d19293B60C1C014E61650"; // Updated with new USDC-based contract address
-const TRADING_ENGINE_ABI = [
-  {
-    "type": "function",
-    "name": "buyToken",
-    "inputs": [
-      {"name": "tokenSymbol", "type": "string"},
-      {"name": "amountIn", "type": "uint256"},
-      {"name": "minAmountOut", "type": "uint256"}
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "sellToken",
-    "inputs": [
-      {"name": "tokenSymbol", "type": "string"},
-      {"name": "amountIn", "type": "uint256"},
-      {"name": "minAmountOut", "type": "uint256"}
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "getExpectedOutput",
-    "inputs": [
-      {"name": "tokenSymbol", "type": "string"},
-      {"name": "amountIn", "type": "uint256"},
-      {"name": "isBuy", "type": "bool"}
-    ],
-    "outputs": [{"name": "", "type": "uint256"}],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getTokenAddress",
-    "inputs": [{"name": "symbol", "type": "string"}],
-    "outputs": [{"name": "", "type": "address"}],
-    "stateMutability": "view"
-  }
-];
-
-/**
- * Execute a trade using the new TradingEngine contract (USDC-based)
- * @param {string} action - "BUY" or "SELL"
- * @param {string} tokenSymbol - Token symbol (WBTC, DAI, WETH)
- * @param {string} amount - Amount to trade
- */
-export async function executeTrade(action, tokenSymbol, amount) {
-  if (!web3 || !currentAccount) {
-    throw new Error("Wallet not connected");
-  }
-
-  try {
-    const tradingContract = new web3.eth.Contract(TRADING_ENGINE_ABI, TRADING_ENGINE_ADDRESS);
-    
-    console.log(`Executing ${action} trade:`, { tokenSymbol, amount });
-
-    // Smart contract now uses USDC as base currency
-    const usdcAddress = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"; // USDC address
-    
-    if (action.toUpperCase() === "BUY") {
-      // BUY means: spend USDC to get the target token
-      console.log(`Buying ${tokenSymbol} with USDC`);
-      
-      // Convert amount to USDC (6 decimals)
-      const usdcAmountInWei = web3.utils.toWei(amount.toString(), "mwei"); // mwei = 6 decimals
-      
-      // Approve USDC for the trading contract
-      await approveTokenForTrading(usdcAddress, usdcAmountInWei);
-      
-      // Get expected output for slippage protection (5% slippage)
-      const expectedOutput = await tradingContract.methods
-        .getExpectedOutput(tokenSymbol, usdcAmountInWei, true)
-        .call();
-      const minAmountOut = (BigInt(expectedOutput) * BigInt(95)) / BigInt(100); // 5% slippage
-      
-      // Execute buy (spend USDC to get tokenSymbol)
-      const tx = await tradingContract.methods
-        .buyToken(tokenSymbol, usdcAmountInWei, minAmountOut.toString())
-        .send({ from: currentAccount });
-      
-      console.log("Buy transaction completed:", tx.transactionHash);
-      return tx;
-      
-    } else if (action.toUpperCase() === "SELL") {
-      // SELL means: sell the target token to get USDC
-      console.log(`Selling ${tokenSymbol} for USDC`);
-      
-      // Convert amount to token decimals (18 decimals for most tokens)
-      const tokenAmountInWei = web3.utils.toWei(amount.toString(), "ether");
-      
-      // Get token address and approve it
-      const tokenAddress = await tradingContract.methods
-        .getTokenAddress(tokenSymbol)
-        .call();
-      
-      // Approve the target token for selling
-      await approveTokenForTrading(tokenAddress, tokenAmountInWei);
-      
-      // Get expected output for slippage protection (5% slippage)
-      const expectedOutput = await tradingContract.methods
-        .getExpectedOutput(tokenSymbol, tokenAmountInWei, false)
-        .call();
-      const minAmountOut = (BigInt(expectedOutput) * BigInt(95)) / BigInt(100); // 5% slippage
-      
-      // Execute sell (sell tokenSymbol to get USDC)
-      const tx = await tradingContract.methods
-        .sellToken(tokenSymbol, tokenAmountInWei, minAmountOut.toString())
-        .send({ from: currentAccount });
-      
-      console.log("Sell transaction completed:", tx.transactionHash);
-      return tx;
-      
-    } else {
-      throw new Error(`Unsupported action: ${action}`);
-    }
-    
-  } catch (error) {
-    console.error("Error executing trade:", error);
-    throw error;
-  }
-}
-
-/**
- * Approve token for the trading engine
- * @param {string} tokenAddress - Token contract address
- * @param {string} amount - Amount to approve in wei
- */
-export async function approveTokenForTrading(tokenAddress, amount) {
-  if (!web3 || !currentAccount) {
-    throw new Error("Wallet not connected");
-  }
-  
-  try {
-    const tokenContract = new web3.eth.Contract(ERC20ABI, tokenAddress);
-    
-    console.log("Approving tokens for trading:", { tokenAddress, amount });
-    
-    const approveTx = await tokenContract.methods
-      .approve(TRADING_ENGINE_ADDRESS, amount)
-      .send({ from: currentAccount });
-      
-    console.log("Tokens approved for trading. Tx:", approveTx.transactionHash);
-    return true;
-  } catch (error) {
-    console.error("Error approving tokens for trading:", error);
-    throw error;
-  }
-}
 
 /**
  * Get trading signals from Python backend
